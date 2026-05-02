@@ -1,0 +1,14 @@
+Sri Maarikamba Super Market|Milk - ₹50
+Sri Maarikamba Super Market|Rice - ₹100
+Sri Maarikamba Super Market|Eggs - ₹60
+Sri Maarikamba Super Market|Bread - ₹40
+Medical Store|Paracetamol
+Medical Store|Cough Syrup
+Medical Store|Medicine / Custom Item
+Pooja Store|Camphor
+Pooja Store|Agarbatti
+Pooja Store|Pooja Oil
+Bakery|Cake
+Bakery|Bread - ₹40
+Bakery|Biscuits
+Lakshmi Store|Rice Flour Nisarga 1kg

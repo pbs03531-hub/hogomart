@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HogoMart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        .app {
+            max-width: 430px;
+            margin: auto;
+            background: white;
+            min-height: 100vh;
+            padding: 15px;
+            box-sizing: border-box;
+            padding-bottom: 100px;
+        }
+
+        .logo {
+            width: 100%;
+            border-radius: 18px;
+            margin-bottom: 12px;
+        }
+
+        .tagline {
+            background: #e8f5e9;
+            color: green;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 13px;
+            margin-top: 7px;
+            margin-bottom: 14px;
+            border-radius: 12px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        .product {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+        }
+
+        .product-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-name {
+            font-weight: bold;
+        }
+
+        .product-price {
+            color: green;
+            font-weight: bold;
+        }
+
+        .qty {
+            width: 70px;
+            padding: 8px;
+            margin-top: 8px;
+        }
+
+        .total-box {
+            background: #fff3cd;
+            padding: 14px;
+            border-radius: 14px;
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px;
+            box-shadow: 0 -3px 12px #ccc;
+        }
+
+        .bottom-inner {
+            max-width: 430px;
+            margin: auto;
+        }
+
+        .order-btn {
+            width: 100%;
+            padding: 15px;
+            background: green;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .links a {
+            display: block;
+            margin: 8px;
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<form action="/order" method="POST" onsubmit="prepareCart()">
+
+<div class="app">
+
+    <img src="{{ url_for('static', filename='logo.png') }}" class="logo">
+
+    <h1>HogoMart 🚀</h1>
+    <p class="tagline">Fast local delivery • Cart • Live Tracking</p>
+
+    <label>Name</label>
+    <input type="text" name="customer_name" required>
+
+    <label>Phone</label>
+    <input type="text" name="phone" required>
+
+    <label>Address</label>
+    <textarea name="address" required></textarea>
+
+    <label>Select Shop</label>
+    <select name="shop" id="shopSelect" onchange="showProducts()" required>
+        {% for shop in products.keys() %}
+            <option value="{{ shop }}">{{ shop }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Search Products</label>
+    <input type="text" id="searchBox" placeholder="Search milk, rice, cake..." onkeyup="showProducts()">
+
+    <div id="productList"></div>
+
+    <div class="total-box">
+        Total: ₹<span id="total">0</span>
+    </div>
+
+    <label>Distance</label>
+    <select name="distance" id="distance" onchange="calculateTotal()">
+        <option value="within_2km">Within 2 km - ₹20</option>
+        <option value="2_5km">2 to 5 km - ₹40</option>
+    </select>
+
+    <label>
+        <input type="checkbox" name="emergency" value="yes" onchange="calculateTotal()">
+        Emergency delivery + ₹20
+    </label>
+
+    <label>Special Request</label>
+    <textarea name="special_request" placeholder="Example: urgent delivery, call before buying"></textarea>
+
+    <label>Payment</label>
+    <select name="payment_method">
+        <option value="COD">Cash on Delivery</option>
+        <option value="UPI">UPI Payment</option>
+    </select>
+
+    <input type="hidden" name="cart_data" id="cartData">
+
+    <div class="links">
+        <a href="/customer-login">Customer Login</a>
+        <a href="/shop-login">Shop Owner Login</a>
+        <a href="/login">Admin Login</a>
+    </div>
+
+</div>
+
+<div class="bottom-bar">
+    <div class="bottom-inner">
+        <button type="submit" class="order-btn">
+            Place Order • ₹<span id="bottomTotal">0</span>
+        </button>
+    </div>
+</div>
+
+</form>
+
+<script>
+    const allProducts = {{ products | tojson }};
+    let currentCart = [];
+
+    function showProducts() {
+        const shop = document.getElementById("shopSelect").value;
+        const search = document.getElementById("searchBox").value.toLowerCase();
+        const list = document.getElementById("productList");
+
+        list.innerHTML = "";
+
+        allProducts[shop].forEach((item) => {
+            if (!item.name.toLowerCase().includes(search)) return;
+
+            list.innerHTML += `
+                <div class="product">
+                    <div class="product-row">
+                        <div>
+                            <div class="product-name">${item.name}</div>
+                            <div class="product-price">₹${item.price}</div>
+                        </div>
+                        <input type="checkbox" class="productCheck"
+                            data-name="${item.name}"
+                            data-price="${item.price}"
+                            data-barcode="${item.barcode || 'NO-BARCODE'}"
+                            onchange="calculateTotal()">
+                    </div>
+
+                    <label>Qty</label>
+                    <input type="number" class="qty" value="1" min="1" onchange="calculateTotal()">
+                </div>
+            `;
+        });
+
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        let subtotal = 0;
+        currentCart = [];
+
+        document.querySelectorAll(".product").forEach(box => {
+            const check = box.querySelector(".productCheck");
+            const qtyInput = box.querySelector(".qty");
+
+            if (check.checked) {
+                const name = check.dataset.name;
+                const price = parseInt(check.dataset.price);
+                const barcode = check.dataset.barcode;
+                const qty = parseInt(qtyInput.value);
+
+                subtotal += price * qty;
+                currentCart.push({name, price, qty, barcode});
+            }
+        });
+
+        let delivery = document.getElementById("distance").value === "within_2km" ? 20 : 40;
+        let emergencyBox = document.querySelector("input[name='emergency']");
+        let emergency = emergencyBox.checked ? 20 : 0;
+
+        let total = subtotal + delivery + emergency;
+
+        document.getElementById("total").innerText = total;
+        document.getElementById("bottomTotal").innerText = total;
+    }
+
+    function prepareCart() {
+        document.getElementById("cartData").value = JSON.stringify(currentCart);
+    }
+
+    showProducts();
+</script>
+
+</body>
+</html>

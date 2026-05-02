@@ -1,0 +1,77 @@
+[
+    {
+        "id": "1777728398",
+        "name": "Pranav B S",
+        "phone": "08123174562",
+        "address": "Behind Sri Devi Auto Works\r\nDevanga Street",
+        "shop": "Sri Maarikamba Super Market",
+        "cart": [
+            {
+                "name": "Milk",
+                "price": 50,
+                "qty": 1,
+                "barcode": "NO-BARCODE"
+            }
+        ],
+        "note": "",
+        "subtotal": 50,
+        "delivery_charge": 20,
+        "total": 70,
+        "status": "Order Received",
+        "payment_method": "COD",
+        "payment_status": "COD Accepted",
+        "delivery_boy": "Not Assigned"
+    },
+    {
+        "id": "1777729260",
+        "name": "Pranav B S",
+        "phone": "08123174562",
+        "address": "Behind Sri Devi Auto Works\r\nDevanga Street",
+        "shop": "Bakery",
+        "cart": [
+            {
+                "name": "Cake",
+                "price": 200,
+                "qty": 1,
+                "barcode": "HM-BAKERY-001"
+            }
+        ],
+        "note": "",
+        "subtotal": 200,
+        "delivery_charge": 60,
+        "total": 260,
+        "status": "Order Received",
+        "payment_method": "COD",
+        "payment_status": "COD Accepted",
+        "delivery_boy": "Not Assigned"
+    },
+    {
+        "id": "1777729711",
+        "name": "Pranav B S",
+        "phone": "08123174562",
+        "address": "Behind Sri Devi Auto Works\r\nDevanga Street",
+        "shop": "Sri Maarikamba Super Market",
+        "cart": [
+            {
+                "name": "Eggs",
+                "price": 60,
+                "qty": 1,
+                "barcode": "HM-EGGS-001"
+            },
+            {
+                "name": "Bread",
+                "price": 40,
+                "qty": 1,
+                "barcode": "HM-BREAD-001"
+            }
+        ],
+        "note": "",
+        "subtotal": 100,
+        "delivery_charge": 40,
+        "total": 140,
+        "status": "Order Received",
+        "payment_method": "COD",
+        "payment_status": "COD Accepted",
+        "delivery_boy": "Not Assigned"
+    }
+]

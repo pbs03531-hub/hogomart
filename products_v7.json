@@ -1,0 +1,127 @@
+{
+    "Sri Maarikamba Super Market": [
+        {
+            "name": "Milk",
+            "price": 50,
+            "barcode": "HM-MILK-001"
+        },
+        {
+            "name": "Rice",
+            "price": 100,
+            "barcode": "HM-RICE-001"
+        },
+        {
+            "name": "Eggs",
+            "price": 60,
+            "barcode": "HM-EGGS-001"
+        },
+        {
+            "name": "Bread",
+            "price": 40,
+            "barcode": "HM-BREAD-001"
+        }
+    ],
+    "Medical Store": [
+        {
+            "name": "Paracetamol",
+            "price": 20,
+            "barcode": "HM-MED-001"
+        },
+        {
+            "name": "Cough Syrup",
+            "price": 80,
+            "barcode": "HM-MED-002"
+        }
+    ],
+    "Pooja Store": [
+        {
+            "name": "Camphor",
+            "price": 30,
+            "barcode": "HM-POOJA-001"
+        },
+        {
+            "name": "Agarbatti",
+            "price": 40,
+            "barcode": "HM-POOJA-002"
+        }
+    ],
+    "Bakery": [
+        {
+            "name": "Cake",
+            "price": 200,
+            "barcode": "HM-BAKERY-001"
+        },
+        {
+            "name": "Biscuits",
+            "price": 30,
+            "barcode": "HM-BAKERY-002"
+        }
+    ],
+    "Lakshmi Store": [
+        {
+            "name": "Red Label Tea  Powder 100gms",
+            "price": 50,
+            "barcode": "8901030977404"
+        },
+        {
+            "name": "Red Label Tea  Powder 100gms",
+            "price": 50,
+            "barcode": "8901030977404"
+        },
+        {
+            "name": "Gooday Butter",
+            "price": 10,
+            "barcode": "8901063370074"
+        },
+        {
+            "name": "Parle G 250gms",
+            "price": 30,
+            "barcode": "8901719123870"
+        },
+        {
+            "name": "Nutri Choice Digestive",
+            "price": 25,
+            "barcode": "8901063142817"
+        },
+        {
+            "name": "Hide&Seek",
+            "price": 30,
+            "barcode": "8901719139208"
+        },
+        {
+            "name": "Marie Gold 200g",
+            "price": 30,
+            "barcode": "8901063371064"
+        },
+        {
+            "name": "Jimjam",
+            "price": 10,
+            "barcode": "8901063029408"
+        },
+        {
+            "name": "Nand1ltr Pch",
+            "price": 202,
+            "barcode": "8908000203112"
+        },
+        {
+            "name": "Sunpure 1ltr pch",
+            "price": 220,
+            "barcode": "8908000502017"
+        },
+        {
+            "name": "Krackjack",
+            "price": 10,
+            "barcode": "8901719135248"
+        },
+        {
+            "name": "Marie Gold 73.8gms",
+            "price": 10,
+            "barcode": "8901063371057"
+        },
+        {
+            "name": "Maska Chaska",
+            "price": 10,
+            "barcode": "8901063367319"
+        }
+    ]
+}

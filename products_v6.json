@@ -1,0 +1,62 @@
+{
+    "Sri Maarikamba Super Market": [
+        {
+            "name": "Milk",
+            "price": 50
+        },
+        {
+            "name": "Rice",
+            "price": 100
+        },
+        {
+            "name": "Eggs",
+            "price": 60
+        },
+        {
+            "name": "Bread",
+            "price": 40
+        }
+    ],
+    "Medical Store": [
+        {
+            "name": "Paracetamol",
+            "price": 20
+        },
+        {
+            "name": "Cough Syrup",
+            "price": 80
+        },
+        {
+            "name": "Medicine / Custom Item",
+            "price": 0
+        }
+    ],
+    "Pooja Store": [
+        {
+            "name": "Camphor",
+            "price": 30
+        },
+        {
+            "name": "Agarbatti",
+            "price": 40
+        },
+        {
+            "name": "Pooja Oil",
+            "price": 90
+        }
+    ],
+    "Bakery": [
+        {
+            "name": "Cake",
+            "price": 200
+        },
+        {
+            "name": "Bread",
+            "price": 40
+        },
+        {
+            "name": "Biscuits",
+            "price": 30
+        }
+    ]
+}

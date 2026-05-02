@@ -1,0 +1,39 @@
+[
+    {
+        "id": "1777722932",
+        "name": "Pranav B S",
+        "phone": "08123174562",
+        "address": "Behind Sri Devi Auto Works\r\nDevanga Street",
+        "shop": "Sri Maarikamba Super Market",
+        "cart": [
+            {
+                "name": "Milk",
+                "price": 50,
+                "qty": 1
+            },
+            {
+                "name": "Rice",
+                "price": 100,
+                "qty": 1
+            },
+            {
+                "name": "Eggs",
+                "price": 60,
+                "qty": 1
+            },
+            {
+                "name": "Bread",
+                "price": 40,
+                "qty": 1
+            }
+        ],
+        "note": "",
+        "subtotal": 250,
+        "delivery_charge": 40,
+        "total": 290,
+        "status": "Delivered",
+        "payment_method": "COD",
+        "payment_status": "Paid",
+        "delivery_boy": "Manu"
+    }
+]
