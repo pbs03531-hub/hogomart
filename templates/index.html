@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>HogoMart</title>
+    <title>HogoMart V11</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
@@ -12,42 +12,76 @@
         }
 
         .app {
-            max-width: 420px;
+            max-width: 430px;
             margin: auto;
             background: white;
             min-height: 100vh;
             padding: 15px;
-            padding-bottom: 100px;
+            padding-bottom: 110px;
+            box-sizing: border-box;
+        }
+
+        .logo, .shop-img, .product-img {
+            width: 100%;
+            border-radius: 16px;
+        }
+
+        .shop-card, .product {
+            border: 1px solid #ddd;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 16px;
+            background: #fafafa;
+        }
+
+        .shop-card {
+            cursor: pointer;
+        }
+
+        .product-img {
+            height: 130px;
+            object-fit: cover;
         }
 
         input, textarea, select {
             width: 100%;
             padding: 12px;
-            margin: 8px 0;
+            margin: 8px 0 14px;
             border-radius: 10px;
             border: 1px solid #ccc;
+            box-sizing: border-box;
         }
 
-        .product {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 10px;
+        .badge {
+            background: orange;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .out {
+            background: red;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
         }
 
         .qty-box {
             display: flex;
             gap: 10px;
-            margin-top: 5px;
+            align-items: center;
         }
 
         .qty-box button {
-            width: 35px;
-            height: 35px;
+            width: 38px;
+            height: 34px;
+            border: none;
+            border-radius: 8px;
             background: green;
             color: white;
-            border: none;
-            border-radius: 6px;
+            font-size: 20px;
         }
 
         .bottom {
@@ -56,8 +90,13 @@
             left: 0;
             right: 0;
             background: white;
-            padding: 10px;
-            box-shadow: 0 -2px 10px #ccc;
+            padding: 12px;
+            box-shadow: 0 -3px 12px #ccc;
+        }
+
+        .bottom-inner {
+            max-width: 430px;
+            margin: auto;
         }
 
         .order-btn {
@@ -66,7 +105,13 @@
             background: green;
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -77,100 +122,244 @@
 
 <div class="app">
 
-    <h2>HogoMart 🛒</h2>
+    <img src="{{ url_for('static', filename='logo.png') }}" class="logo">
 
-    <input name="customer_name" placeholder="Name" required>
-    <input name="phone" placeholder="Phone" required>
-    <textarea name="address" placeholder="Address" required></textarea>
+    <h1>HogoMart 🚀</h1>
+    <p><b>Fast local delivery • Shops • Products • Images</b></p>
 
-    <select name="shop" id="shopSelect" onchange="showProducts()">
-        {% for shop in products.keys() %}
-            <option value="{{ shop }}">{{ shop }}</option>
+    <div id="shopSection">
+        <h2>Select Shop</h2>
+
+        {% for shop, data in shops.items() %}
+        <div class="shop-card" onclick="selectShop('{{ shop }}')">
+            <img src="/static/product_images/{{ data.get('image', 'logo.png') }}" class="shop-img">
+            <h3>{{ shop }}</h3>
+            <p>{{ data.get('category', '') }}</p>
+            <p>📞 {{ data.get('phone', '') }}</p>
+        </div>
         {% endfor %}
-    </select>
+    </div>
 
-    <input type="text" id="searchBox" placeholder="Search product..." onkeyup="showProducts()">
+    <div id="orderSection" class="hidden">
 
-    <div id="productList"></div>
+        <button type="button" onclick="goBack()">⬅ Back to Shops</button>
 
-    <input type="hidden" name="cart_data" id="cartData">
+        <h2 id="selectedShopTitle"></h2>
+
+        <input type="hidden" name="shop" id="shopInput">
+
+        <label>Name</label>
+        <input type="text" name="customer_name" required>
+
+        <label>Phone</label>
+        <input type="text" name="phone" required>
+
+        <label>Address</label>
+        <textarea name="address" id="address" required></textarea>
+
+        <a id="callShop" href="#" style="display:block;background:#25D366;color:white;padding:12px;border-radius:12px;text-align:center;text-decoration:none;font-weight:bold;">
+            📞 Call Shop
+        </a>
+
+        <br>
+
+        <label>Search Products</label>
+        <input type="text" id="searchBox" placeholder="Search product..." onkeyup="showProducts()">
+
+        <label>Category</label>
+        <select id="categorySelect" onchange="showProducts()">
+            <option value="All">All</option>
+        </select>
+
+        <div id="productList"></div>
+
+        <label>Distance</label>
+        <select name="distance" id="distance" onchange="calculateTotal()">
+            <option value="within_2km">Within 2 km - ₹20</option>
+            <option value="2_5km">2 to 5 km - ₹40</option>
+        </select>
+
+        <label>
+            <input type="checkbox" name="emergency" value="yes" onchange="calculateTotal()">
+            Emergency Delivery + ₹20
+        </label>
+
+        <label>Special Request</label>
+        <textarea name="special_request"></textarea>
+
+        <label>Payment Method</label>
+        <select name="payment_method">
+            <option value="COD">Cash on Delivery</option>
+            <option value="UPI">UPI Payment</option>
+        </select>
+
+        <input type="hidden" name="cart_data" id="cartData">
+
+        <p><a href="/login">Admin Login</a></p>
+
+    </div>
 
 </div>
 
 <div class="bottom">
-    Total: ₹<span id="total">0</span>
-    <button class="order-btn">Place Order</button>
+    <div class="bottom-inner">
+        <b>Total: ₹<span id="bottomTotal">0</span></b>
+        <button type="submit" class="order-btn">Checkout</button>
+    </div>
 </div>
 
 </form>
 
 <script>
+    const shops = {{ shops | tojson }};
     const products = {{ products | tojson }};
-    let cart = [];
+    let selectedShop = "";
+    let currentCart = [];
+
+    function selectShop(shop) {
+        selectedShop = shop;
+        document.getElementById("shopSection").classList.add("hidden");
+        document.getElementById("orderSection").classList.remove("hidden");
+
+        document.getElementById("selectedShopTitle").innerText = shop;
+        document.getElementById("shopInput").value = shop;
+        document.getElementById("callShop").href = "tel:" + shops[shop].phone;
+
+        loadCategories();
+        showProducts();
+    }
+
+    function goBack() {
+        selectedShop = "";
+        currentCart = [];
+        document.getElementById("shopSection").classList.remove("hidden");
+        document.getElementById("orderSection").classList.add("hidden");
+        calculateTotal();
+    }
+
+    function loadCategories() {
+        const categorySelect = document.getElementById("categorySelect");
+        categorySelect.innerHTML = "<option value='All'>All</option>";
+
+        let cats = [];
+
+        products[selectedShop].forEach(item => {
+            const cat = item.category || "General";
+            if (!cats.includes(cat)) cats.push(cat);
+        });
+
+        cats.forEach(cat => {
+            categorySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+        });
+    }
 
     function showProducts() {
-        const shop = document.getElementById("shopSelect").value;
-        const search = document.getElementById("searchBox").value.toLowerCase();
         const list = document.getElementById("productList");
+        const search = document.getElementById("searchBox").value.toLowerCase();
+        const category = document.getElementById("categorySelect").value;
 
         list.innerHTML = "";
 
-        products[shop].forEach(item => {
+        products[selectedShop].forEach(item => {
+            const itemCategory = item.category || "General";
+
             if (!item.name.toLowerCase().includes(search)) return;
+            if (category !== "All" && itemCategory !== category) return;
+
+            const isOut = item.stock <= 0;
+            const disabled = isOut ? "disabled" : "";
+            const badge = isOut ? "<span class='out'>Out of Stock</span>" : "<span class='badge'>Best Seller</span>";
 
             list.innerHTML += `
                 <div class="product">
-                    <b>${item.name}</b> - ₹${item.price}<br>
+                    <img src="/static/product_images/${item.image || 'logo.png'}" class="product-img">
+                    <h3>${item.name}</h3>
+                    <p><b>₹${item.price}</b></p>
+                    <p>Stock: ${item.stock}</p>
+                    <p>${badge}</p>
 
-                    <input type="checkbox" class="check"
+                    <input type="checkbox" class="productCheck"
                         data-name="${item.name}"
                         data-price="${item.price}"
-                        onchange="calc()">
+                        data-stock="${item.stock}"
+                        data-barcode="${item.barcode}"
+                        onchange="calculateTotal()" ${disabled}>
 
                     <div class="qty-box">
-                        <button type="button" onclick="qty(this,-1)">-</button>
-                        <input type="number" class="qty" value="1" min="1">
-                        <button type="button" onclick="qty(this,1)">+</button>
+                        <button type="button" onclick="changeQty(this, -1)" ${disabled}>-</button>
+                        <input type="number" class="qty" value="1" min="1" max="${item.stock}" onchange="calculateTotal()" ${disabled}>
+                        <button type="button" onclick="changeQty(this, 1)" ${disabled}>+</button>
                     </div>
                 </div>
             `;
         });
+
+        calculateTotal();
     }
 
-    function qty(btn, val) {
-        let input = btn.parentElement.querySelector(".qty");
-        let v = parseInt(input.value) + val;
-        if (v < 1) v = 1;
-        input.value = v;
-        calc();
+    function changeQty(button, change) {
+        const box = button.closest(".product");
+        const qtyInput = box.querySelector(".qty");
+        const check = box.querySelector(".productCheck");
+
+        let qty = parseInt(qtyInput.value) + change;
+        const stock = parseInt(check.dataset.stock);
+
+        if (qty < 1) qty = 1;
+        if (qty > stock) qty = stock;
+
+        qtyInput.value = qty;
+        check.checked = true;
+
+        calculateTotal();
     }
 
-    function calc() {
-        let total = 0;
-        cart = [];
+    function calculateTotal() {
+        let subtotal = 0;
+        currentCart = [];
 
-        document.querySelectorAll(".product").forEach(p => {
-            let check = p.querySelector(".check");
-            let qty = parseInt(p.querySelector(".qty").value);
+        document.querySelectorAll(".product").forEach(box => {
+            const check = box.querySelector(".productCheck");
+            const qtyInput = box.querySelector(".qty");
 
-            if (check.checked) {
-                let name = check.dataset.name;
-                let price = parseInt(check.dataset.price);
+            if (check && check.checked) {
+                const name = check.dataset.name;
+                const price = parseInt(check.dataset.price);
+                const stock = parseInt(check.dataset.stock);
+                const barcode = check.dataset.barcode;
+                let qty = parseInt(qtyInput.value);
 
-                total += price * qty;
-                cart.push({name, price, qty});
+                if (qty > stock) {
+                    qty = stock;
+                    qtyInput.value = stock;
+                }
+
+                subtotal += price * qty;
+                currentCart.push({ name, price, qty, barcode });
             }
         });
 
-        document.getElementById("total").innerText = total;
+        let delivery = document.getElementById("distance") ? (document.getElementById("distance").value === "within_2km" ? 20 : 40) : 0;
+        let emergencyBox = document.querySelector("input[name='emergency']");
+        let emergency = emergencyBox && emergencyBox.checked ? 20 : 0;
+
+        document.getElementById("bottomTotal").innerText = subtotal + delivery + emergency;
     }
 
     function prepareCart() {
-        document.getElementById("cartData").value = JSON.stringify(cart);
+        const address = document.getElementById("address").value;
+        localStorage.setItem("hogomart_last_address", address);
+        document.getElementById("cartData").value = JSON.stringify(currentCart);
     }
 
-    window.onload = showProducts;
+    window.onload = function () {
+        const savedAddress = localStorage.getItem("hogomart_last_address");
+        if (savedAddress && document.getElementById("address")) {
+            document.getElementById("address").value = savedAddress;
+        }
+    };
 </script>
 
 </body>
 </html>
+ 
