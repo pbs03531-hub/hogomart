@@ -1,1 +1,176 @@
-http://127.0.0.1:5000
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HogoMart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        .app {
+            max-width: 420px;
+            margin: auto;
+            background: white;
+            min-height: 100vh;
+            padding: 15px;
+            padding-bottom: 100px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .product {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+        }
+
+        .qty-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .qty-box button {
+            width: 35px;
+            height: 35px;
+            background: green;
+            color: white;
+            border: none;
+            border-radius: 6px;
+        }
+
+        .bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 10px;
+            box-shadow: 0 -2px 10px #ccc;
+        }
+
+        .order-btn {
+            width: 100%;
+            padding: 15px;
+            background: green;
+            color: white;
+            border: none;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<form action="/order" method="POST" onsubmit="prepareCart()">
+
+<div class="app">
+
+    <h2>HogoMart 🛒</h2>
+
+    <input name="customer_name" placeholder="Name" required>
+    <input name="phone" placeholder="Phone" required>
+    <textarea name="address" placeholder="Address" required></textarea>
+
+    <select name="shop" id="shopSelect" onchange="showProducts()">
+        {% for shop in products.keys() %}
+            <option value="{{ shop }}">{{ shop }}</option>
+        {% endfor %}
+    </select>
+
+    <input type="text" id="searchBox" placeholder="Search product..." onkeyup="showProducts()">
+
+    <div id="productList"></div>
+
+    <input type="hidden" name="cart_data" id="cartData">
+
+</div>
+
+<div class="bottom">
+    Total: ₹<span id="total">0</span>
+    <button class="order-btn">Place Order</button>
+</div>
+
+</form>
+
+<script>
+    const products = {{ products | tojson }};
+    let cart = [];
+
+    function showProducts() {
+        const shop = document.getElementById("shopSelect").value;
+        const search = document.getElementById("searchBox").value.toLowerCase();
+        const list = document.getElementById("productList");
+
+        list.innerHTML = "";
+
+        products[shop].forEach(item => {
+            if (!item.name.toLowerCase().includes(search)) return;
+
+            list.innerHTML += `
+                <div class="product">
+                    <b>${item.name}</b> - ₹${item.price}<br>
+
+                    <input type="checkbox" class="check"
+                        data-name="${item.name}"
+                        data-price="${item.price}"
+                        onchange="calc()">
+
+                    <div class="qty-box">
+                        <button type="button" onclick="qty(this,-1)">-</button>
+                        <input type="number" class="qty" value="1" min="1">
+                        <button type="button" onclick="qty(this,1)">+</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function qty(btn, val) {
+        let input = btn.parentElement.querySelector(".qty");
+        let v = parseInt(input.value) + val;
+        if (v < 1) v = 1;
+        input.value = v;
+        calc();
+    }
+
+    function calc() {
+        let total = 0;
+        cart = [];
+
+        document.querySelectorAll(".product").forEach(p => {
+            let check = p.querySelector(".check");
+            let qty = parseInt(p.querySelector(".qty").value);
+
+            if (check.checked) {
+                let name = check.dataset.name;
+                let price = parseInt(check.dataset.price);
+
+                total += price * qty;
+                cart.push({name, price, qty});
+            }
+        });
+
+        document.getElementById("total").innerText = total;
+    }
+
+    function prepareCart() {
+        document.getElementById("cartData").value = JSON.stringify(cart);
+    }
+
+    window.onload = showProducts;
+</script>
+
+</body>
+</html>
