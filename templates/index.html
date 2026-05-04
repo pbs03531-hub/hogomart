@@ -1,192 +1,530 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HogoMart</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HogoMart | Local Ordering App</title>
 
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,system-ui}
-    body{background:#f6f7fb;color:#111;padding-bottom:160px}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:Inter,Arial,system-ui}
+    body{background:#f6f7fb;color:#111;padding-bottom:170px}
+    a{text-decoration:none;color:inherit}
+    button,input,select{font-family:inherit}
+    .app{max-width:1200px;margin:auto}
 
-    .top{
-      position:sticky;top:0;z-index:100;
-      background:#fff;padding:12px;
-      display:flex;justify-content:space-between;align-items:center;
-      box-shadow:0 8px 20px rgba(0,0,0,.05)
-    }
+    .topbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{width:42px;height:42px;border-radius:12px;object-fit:contain}
+    .brand h1{font-size:21px;font-weight:950}
+    .brand p{font-size:11px;color:#666;font-weight:700}
+    .login-links{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+    .login-links a{font-size:11px;padding:8px 10px;background:#111;color:#fff;border-radius:999px;font-weight:850}
 
-    .logo{display:flex;align-items:center;gap:8px}
-    .logo img{width:40px;border-radius:10px}
-    .logo h1{font-size:18px}
+    .hero{margin:16px;border-radius:30px;padding:28px 18px;background:linear-gradient(135deg,#ff6b00,#ff2e63 55%,#6c2cff);color:white;box-shadow:0 18px 45px rgba(255,90,0,.25)}
+    .hero h2{font-size:31px;line-height:1.05;letter-spacing:-1px;margin-bottom:10px}
+    .hero p{font-size:15px;margin-bottom:18px;font-weight:650;opacity:.96}
+    .search-wrap{background:#fff;border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:8px;box-shadow:0 12px 35px rgba(0,0,0,.14)}
+    .search-wrap input{flex:1;border:none;outline:none;font-size:15px;font-weight:750;padding:10px;color:#222}
 
-    .links a{
-      font-size:11px;background:#111;color:#fff;
-      padding:6px 8px;border-radius:20px;margin-left:5px;text-decoration:none
-    }
+    .section{padding:6px 16px 18px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .section h3{font-size:21px;font-weight:950}
+    .section small{color:#777;font-weight:800}
 
-    .hero{
-      margin:12px;padding:20px;border-radius:20px;
-      background:linear-gradient(135deg,#ff6b00,#ff2e63);
-      color:#fff
-    }
+    .chips{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+    .chip{border:0;padding:11px 15px;border-radius:999px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.07);font-weight:900;white-space:nowrap}
+    .chip.active{background:#111;color:white}
 
-    .search{margin-top:10px;background:#fff;padding:10px;border-radius:12px}
-    .search input{width:100%;border:none;outline:none}
+    .shop-row,.products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:14px}
+    .shop-card,.product-card{background:white;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.075);overflow:hidden;border:1px solid rgba(0,0,0,.04)}
+    .shop-card{padding:16px}
+    .shop-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .shop-icon{width:48px;height:48px;border-radius:17px;background:#fff1e6;display:grid;place-items:center;font-size:23px}
+    .shop-card h4{font-size:16px;font-weight:950;margin-bottom:5px}
+    .shop-card p{font-size:13px;color:#666;font-weight:650;line-height:1.4}
 
-    .section{padding:12px}
-    .section h3{margin-bottom:8px}
+    .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .badge{font-size:10px;font-weight:950;padding:5px 8px;border-radius:999px;background:#f1f1f1;color:#333}
+    .green{background:#e8fff1;color:#079444}
+    .orange{background:#fff1e6;color:#ff6200}
+    .purple{background:#f0e9ff;color:#6c2cff}
+    .red{background:#ffe9e9;color:#d10000}
 
-    .grid{
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-      gap:10px
-    }
+    .filters{background:white;margin:0 16px 16px;padding:14px;border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.07);display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .filters select{width:100%;border:1px solid #eee;background:#fafafa;border-radius:14px;padding:12px;outline:none;font-weight:850;color:#333}
 
-    .card{
-      background:#fff;padding:10px;border-radius:15px;
-      box-shadow:0 8px 20px rgba(0,0,0,.05)
-    }
+    .product-img{height:150px;background:linear-gradient(135deg,#f3f3f3,#fff);display:grid;place-items:center;color:#999;font-weight:950}
+    .product-img img{width:100%;height:100%;object-fit:cover}
+    .product-body{padding:14px;display:flex;flex-direction:column;gap:8px}
+    .product-title{font-size:16px;font-weight:950}
+    .shop-name{font-size:12px;color:#777;font-weight:750}
+    .price-line{display:flex;justify-content:space-between;align-items:center}
+    .price{font-size:19px;font-weight:950}
+    .stock{font-size:11px;font-weight:950;padding:5px 8px;background:#f6f6f6;border-radius:999px;color:#555}
+    .stock.out{background:#ffe9e9;color:#d10000}
 
-    .price{font-weight:bold}
-    .btn{
-      margin-top:5px;width:100%;padding:8px;border:none;
-      border-radius:10px;background:#111;color:#fff
-    }
+    .product-actions{display:flex;align-items:center;gap:9px;margin-top:auto}
+    .qty-control{display:flex;align-items:center;gap:8px;background:#f5f5f5;border-radius:999px;padding:6px}
+    .qty-control button{width:30px;height:30px;border:0;border-radius:50%;background:white;font-size:18px;font-weight:950}
+    .qty-control span{min-width:22px;text-align:center;font-weight:950}
+    .add-btn{flex:1;border:0;border-radius:999px;padding:12px;background:#111;color:white;font-weight:950}
+    .add-btn.added{background:#0ba84a}
+    .add-btn:disabled{background:#ccc}
 
-    .cart{
-      position:fixed;bottom:0;left:0;width:100%;
-      background:#111;color:#fff;padding:10px
-    }
+    .cart-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(1120px,calc(100% - 24px));background:rgba(18,18,18,.96);color:white;border-radius:26px;padding:14px;z-index:999;box-shadow:0 18px 55px rgba(0,0,0,.3)}
+    .cart-main{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .cart-main strong{font-size:17px}
+    .cart-main small{display:block;color:#bbb;font-weight:750}
+    .cart-total{font-size:21px;font-weight:950}
+    .cart-options{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+    .cart-options input,.cart-options select{width:100%;border:0;outline:0;border-radius:15px;padding:12px;font-weight:850;background:#2a2a2a;color:white}
+    .checkout-btn{border:0;border-radius:16px;background:linear-gradient(135deg,#ff6b00,#ff2e63);color:white;font-weight:950;padding:12px}
+    .empty{background:white;padding:24px;border-radius:24px;text-align:center;color:#777;font-weight:850;box-shadow:0 8px 25px rgba(0,0,0,.06)}
 
-    .cart button{
-      width:100%;padding:10px;background:#ff6b00;
-      border:none;color:#fff;border-radius:10px;margin-top:5px
+    @media(max-width:720px){
+      .topbar{align-items:flex-start}
+      .login-links{max-width:185px}
+      .login-links a{font-size:10px;padding:7px 8px}
+      .hero h2{font-size:27px}
+      .filters{grid-template-columns:1fr}
+      .products-grid{grid-template-columns:1fr}
+      .cart-options{grid-template-columns:1fr 1fr}
+      .checkout-btn{grid-column:1/-1}
     }
   </style>
 </head>
 
 <body>
+  <div class="app">
+    <header class="topbar">
+      <a href="/" class="brand">
+        <img src="/static/logo.png" alt="HogoMart" onerror="this.style.display='none'">
+        <div>
+          <h1>HogoMart</h1>
+          <p>Local shops. Fast orders.</p>
+        </div>
+      </a>
 
-<div class="top">
-  <div class="logo">
-    <img src="/static/logo.png">
-    <h1>HogoMart</h1>
-  </div>
+      <nav class="login-links">
+        <a href="/login?role=customer">Customer</a>
+        <a href="/login?role=shop">Shop</a>
+        <a href="/login?role=delivery">Delivery</a>
+        <a href="/login?role=admin">Admin</a>
+      </nav>
+    </header>
 
-  <div class="links">
-    <a href="/login">User</a>
-    <a href="/login?role=shop">Shop</a>
-    <a href="/login?role=delivery">Delivery</a>
-    <a href="/login?role=admin">Admin</a>
-  </div>
-</div>
-
-<div class="hero">
-  <h2>Order from local shops</h2>
-  <p>Low platform charges</p>
-
-  <div class="search">
-    <input id="search" placeholder="Search products or shops">
-  </div>
-</div>
-
-<div class="section">
-  <h3>Featured Shops</h3>
-  <div class="grid">
-    {% for s in shops %}
-      {% if s.featured %}
-      <div class="card">
-        <b>{{s.name}}</b>
-        <p>{{s.category}}</p>
-        <p>⭐ {{s.rating}}</p>
+    <section class="hero">
+      <h2>Order from local shops with low platform charges</h2>
+      <p>Groceries, gifts, food and daily needs from trusted nearby shops.</p>
+      <div class="search-wrap">
+        <span>🔍</span>
+        <input id="searchInput" type="search" placeholder="Search products or shops..." autocomplete="off">
       </div>
-      {% endif %}
-    {% endfor %}
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h3>Categories</h3>
+        <small>Tap to filter</small>
+      </div>
+      <div class="chips" id="categoryChips">
+        <button class="chip active" type="button" data-category="">All</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h3>Featured Shops</h3>
+        <small>Verified partners</small>
+      </div>
+      <div class="shop-row">
+        {% for shop in shops %}
+          {% if shop.featured or shop.verified %}
+          <div class="shop-card">
+            <div class="shop-top">
+              <div class="shop-icon">🏪</div>
+              <strong>⭐ {{ shop.rating|default(4.5) }}</strong>
+            </div>
+            <h4>{{ shop.name }}</h4>
+            <p>{{ shop.category|default("Local Shop") }} • {{ shop.delivery_time|default("30-45 min") }}</p>
+            <p>{{ shop.address|default("") }}</p>
+            <div class="badges">
+              {% if shop.verified %}<span class="badge green">Verified</span>{% endif %}
+              {% if shop.featured %}<span class="badge orange">Featured</span>{% endif %}
+              <span class="badge purple">{{ shop.plan|default("Free") }}</span>
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h3>Trending / Best Sellers</h3>
+        <small>Popular now</small>
+      </div>
+      <div class="products-grid" id="trendingProducts"></div>
+    </section>
+
+    <div class="filters">
+      <select id="shopFilter">
+        <option value="">All Shops</option>
+        {% for shop in shops %}
+          <option value="{{ shop.id }}">{{ shop.name }}</option>
+        {% endfor %}
+      </select>
+
+      <select id="categoryFilter">
+        <option value="">All Categories</option>
+      </select>
+
+      <select id="sortFilter">
+        <option value="az">Sort A-Z</option>
+        <option value="low">Low Price</option>
+        <option value="high">High Price</option>
+      </select>
+    </div>
+
+    <section class="section">
+      <div class="section-head">
+        <h3>All Products</h3>
+        <small id="productCount">0 products</small>
+      </div>
+      <div class="products-grid" id="allProducts"></div>
+    </section>
   </div>
-</div>
 
-<div class="section">
-  <h3>Products</h3>
-  <div class="grid" id="products"></div>
-</div>
+  <form id="orderForm" action="/order" method="POST" class="cart-bar">
+    <input type="hidden" name="cart_data" id="cartDataInput">
+    <input type="hidden" name="total_amount" id="totalAmountInput">
 
-<div class="cart">
-  <div id="cartText">0 items - ₹0</div>
-  <button onclick="checkout()">Checkout</button>
-</div>
+    <div class="cart-main">
+      <div>
+        <strong><span id="cartCount">0</span> items selected</strong>
+        <small>Multi-shop cart supported</small>
+      </div>
+      <div class="cart-total">₹<span id="cartTotal">0</span></div>
+    </div>
 
-<script>
-const products = {{products|tojson}};
-const shops = {{shops|tojson}};
+    <div class="cart-options">
+      <input type="text" name="name" id="customerName" placeholder="Name" required>
+      <input type="tel" name="phone" id="customerPhone" placeholder="Phone" required>
+      <input type="text" name="address" id="customerAddress" placeholder="Address" required>
 
-let cart = {};
+      <select name="delivery_type" id="deliveryType">
+        <option value="normal" data-extra="0">Normal Delivery</option>
+        <option value="emergency" data-extra="20">Emergency +₹20</option>
+      </select>
 
-function render(){
-  let container = document.getElementById("products");
-  container.innerHTML="";
+      <select name="payment_method" id="paymentMethod">
+        <option value="COD">COD</option>
+        <option value="UPI">UPI</option>
+      </select>
 
-  let search = document.getElementById("search").value.toLowerCase();
+      <button type="submit" class="checkout-btn">Place Order</button>
+    </div>
+  </form>
 
-  products.forEach(p=>{
-    if(search && !p.name.toLowerCase().includes(search)) return;
+  <script>
+    const shops = {{ shops|tojson|safe }};
+    const products = {{ products|tojson|safe }};
+    const cart = {};
 
-    let card=document.createElement("div");
-    card.className="card";
+    const safeNum = (v, f = 0) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : f;
+    };
 
-    let shop = shops.find(s=>s.id==p.shop_id);
+    const shopMap = {};
+    shops.forEach(s => shopMap[s.id] = s);
 
-    card.innerHTML=`
-      <b>${p.name}</b>
-      <p>${shop ? shop.name : ""}</p>
-      <div class="price">₹${p.price}</div>
-      <button class="btn" onclick="add('${p.id}')">Add</button>
-    `;
+    const settings = {{ settings|tojson|safe }};
+    const baseDeliveryFee = safeNum(settings.default_delivery_fee, 30);
+    const platformFee = safeNum(settings.platform_fee, 5);
 
-    container.appendChild(card);
-  });
-}
+    const searchInput = document.getElementById("searchInput");
+    const categoryChips = document.getElementById("categoryChips");
+    const shopFilter = document.getElementById("shopFilter");
+    const categoryFilter = document.getElementById("categoryFilter");
+    const sortFilter = document.getElementById("sortFilter");
+    const allProducts = document.getElementById("allProducts");
+    const trendingProducts = document.getElementById("trendingProducts");
+    const productCount = document.getElementById("productCount");
+    const cartCount = document.getElementById("cartCount");
+    const cartTotal = document.getElementById("cartTotal");
+    const deliveryType = document.getElementById("deliveryType");
+    const paymentMethod = document.getElementById("paymentMethod");
+    const orderForm = document.getElementById("orderForm");
+    const cartDataInput = document.getElementById("cartDataInput");
+    const totalAmountInput = document.getElementById("totalAmountInput");
+    const customerName = document.getElementById("customerName");
+    const customerPhone = document.getElementById("customerPhone");
+    const customerAddress = document.getElementById("customerAddress");
 
-function add(id){
-  cart[id]=(cart[id]||0)+1;
-  update();
-}
+    function getTags(p){
+      if(Array.isArray(p.tags)) return p.tags;
+      if(typeof p.tags === "string") return p.tags.split(",").map(x=>x.trim()).filter(Boolean);
+      return [];
+    }
 
-function update(){
-  let count=0,total=0;
+    function getShopName(shopId){
+      return shopMap[shopId]?.name || "Local Shop";
+    }
 
-  for(let id in cart){
-    let p = products.find(x=>x.id==id);
-    count+=cart[id];
-    total+=p.price*cart[id];
-  }
+    function getImage(p){
+      return p.image || p.image_url || p.photo || "";
+    }
 
-  document.getElementById("cartText").innerText = count+" items - ₹"+total;
-}
+    function loadCustomer(){
+      customerName.value = localStorage.getItem("hm_name") || "";
+      customerPhone.value = localStorage.getItem("hm_phone") || "";
+      customerAddress.value = localStorage.getItem("hm_address") || "";
+    }
 
-function checkout(){
-  let data=[];
+    function saveCustomer(){
+      localStorage.setItem("hm_name", customerName.value.trim());
+      localStorage.setItem("hm_phone", customerPhone.value.trim());
+      localStorage.setItem("hm_address", customerAddress.value.trim());
+    }
 
-  for(let id in cart){
-    data.push({product_id:id,qty:cart[id]});
-  }
+    [customerName, customerPhone, customerAddress].forEach(i => i.addEventListener("input", saveCustomer));
 
-  let form=document.createElement("form");
-  form.method="POST";
-  form.action="/order";
+    function buildCategories(){
+      const cats = [...new Set(products.map(p => p.category || "General"))].sort();
 
-  let input=document.createElement("input");
-  input.name="cart_data";
-  input.value=JSON.stringify({items:data});
+      cats.forEach(cat => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip";
+        chip.dataset.category = cat;
+        chip.textContent = cat;
+        categoryChips.appendChild(chip);
 
-  form.appendChild(input);
-  document.body.appendChild(form);
-  form.submit();
-}
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        categoryFilter.appendChild(opt);
+      });
 
-document.getElementById("search").oninput=render;
+      categoryChips.addEventListener("click", e => {
+        if(!e.target.classList.contains("chip")) return;
+        document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+        e.target.classList.add("active");
+        categoryFilter.value = e.target.dataset.category || "";
+        renderProducts();
+      });
+    }
 
-render();
-</script>
+    function productCard(p){
+      const id = p.id;
+      const price = safeNum(p.price);
+      const stock = safeNum(p.stock);
+      const image = getImage(p);
+      const tags = getTags(p);
+      const out = stock <= 0;
+      const qty = cart[id]?.qty || 1;
+      const added = !!cart[id];
 
+      const card = document.createElement("div");
+      card.className = "product-card";
+      card.innerHTML = `
+        <div class="product-img">
+          ${image ? `<img src="${image}" onerror="this.remove();this.parentElement.innerHTML='No Image';">` : "No Image"}
+        </div>
+        <div class="product-body">
+          <div>
+            <div class="product-title">${p.name || "Unnamed Product"}</div>
+            <div class="shop-name">${getShopName(p.shop_id)}</div>
+          </div>
+
+          <div class="badges">
+            ${tags.map(t => `<span class="badge orange">${t}</span>`).join("")}
+            ${p.offer ? `<span class="badge green">${p.offer}</span>` : ""}
+            ${out ? `<span class="badge red">Out of Stock</span>` : ""}
+          </div>
+
+          <div class="price-line">
+            <div class="price">₹${price.toFixed(0)}</div>
+            <div class="stock ${out ? "out" : ""}">${out ? "Out" : stock + " left"}</div>
+          </div>
+
+          <div class="product-actions">
+            <div class="qty-control">
+              <button type="button" onclick="changeQty('${id}',-1)">−</button>
+              <span id="qty-${id}">${qty}</span>
+              <button type="button" onclick="changeQty('${id}',1)">+</button>
+            </div>
+            <button type="button" class="add-btn ${added ? "added" : ""}" ${out ? "disabled" : ""} onclick="toggleCart('${id}')">
+              ${added ? "Added" : "Add"}
+            </button>
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    function getFiltered(){
+      const q = searchInput.value.trim().toLowerCase();
+      const shopId = shopFilter.value;
+      const cat = categoryFilter.value;
+      const sort = sortFilter.value;
+
+      let list = products.filter(p => {
+        const shop = shopMap[p.shop_id] || {};
+        const text = [
+          p.name || "",
+          p.category || "",
+          p.offer || "",
+          p.description || "",
+          getTags(p).join(" "),
+          shop.name || "",
+          shop.category || ""
+        ].join(" ").toLowerCase();
+
+        return (!q || text.includes(q)) &&
+               (!shopId || p.shop_id === shopId) &&
+               (!cat || p.category === cat);
+      });
+
+      if(sort === "az") list.sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+      if(sort === "low") list.sort((a,b)=>safeNum(a.price)-safeNum(b.price));
+      if(sort === "high") list.sort((a,b)=>safeNum(b.price)-safeNum(a.price));
+
+      return list;
+    }
+
+    function renderTrending(){
+      const trending = products.filter(p => {
+        const t = getTags(p).join(" ").toLowerCase();
+        return t.includes("best") || t.includes("trending") || p.offer;
+      }).slice(0,8);
+
+      trendingProducts.innerHTML = "";
+      if(!trending.length){
+        trendingProducts.innerHTML = `<div class="empty">Trending products will appear here.</div>`;
+        return;
+      }
+      trending.forEach(p => trendingProducts.appendChild(productCard(p)));
+    }
+
+    function renderProducts(){
+      const list = getFiltered();
+      allProducts.innerHTML = "";
+
+      if(!list.length){
+        allProducts.innerHTML = `<div class="empty">No products found.</div>`;
+      }else{
+        list.forEach(p => allProducts.appendChild(productCard(p)));
+      }
+
+      productCount.textContent = `${list.length} products`;
+      renderTrending();
+      updateCart();
+    }
+
+    function changeQty(id, delta){
+      const p = products.find(x => x.id === id);
+      if(!p) return;
+
+      const stock = safeNum(p.stock);
+      const el = document.getElementById(`qty-${id}`);
+      let qty = cart[id]?.qty || safeNum(el?.textContent,1);
+      qty = Math.max(1, qty + delta);
+      qty = Math.min(qty, stock || qty);
+
+      if(cart[id]) cart[id].qty = qty;
+      document.querySelectorAll(`[id="qty-${id}"]`).forEach(x => x.textContent = qty);
+      updateCart();
+    }
+
+    function toggleCart(id){
+      const p = products.find(x => x.id === id);
+      if(!p) return;
+
+      const stock = safeNum(p.stock);
+      if(stock <= 0) return;
+
+      const qty = safeNum(document.getElementById(`qty-${id}`)?.textContent,1);
+
+      if(cart[id]){
+        delete cart[id];
+      }else{
+        cart[id] = {
+          product_id:id,
+          shop_id:p.shop_id,
+          shop_name:getShopName(p.shop_id),
+          name:p.name,
+          price:safeNum(p.price),
+          qty:Math.min(qty,stock),
+          stock:stock
+        };
+      }
+
+      renderProducts();
+      updateCart();
+    }
+
+    function updateCart(){
+      let count = 0;
+      let subtotal = 0;
+
+      Object.values(cart).forEach(item => {
+        count += safeNum(item.qty);
+        subtotal += safeNum(item.price) * safeNum(item.qty);
+      });
+
+      const emergencyExtra = safeNum(deliveryType.options[deliveryType.selectedIndex]?.dataset?.extra,0);
+      const deliveryFee = count > 0 ? baseDeliveryFee + emergencyExtra : 0;
+      const total = count > 0 ? subtotal + deliveryFee + platformFee : 0;
+
+      cartCount.textContent = count;
+      cartTotal.textContent = total.toFixed(0);
+      totalAmountInput.value = total.toFixed(2);
+
+      cartDataInput.value = JSON.stringify({
+        items:Object.values(cart),
+        item_count:count,
+        subtotal:subtotal,
+        delivery_fee:deliveryFee,
+        platform_fee:count > 0 ? platformFee : 0,
+        emergency_delivery:deliveryType.value === "emergency",
+        payment_method:paymentMethod.value,
+        total:total
+      });
+    }
+
+    orderForm.addEventListener("submit", e => {
+      saveCustomer();
+      updateCart();
+
+      if(!Object.keys(cart).length){
+        e.preventDefault();
+        alert("Please add at least one product to cart.");
+      }
+    });
+
+    searchInput.addEventListener("input", renderProducts);
+    shopFilter.addEventListener("change", renderProducts);
+    sortFilter.addEventListener("change", renderProducts);
+    deliveryType.addEventListener("change", updateCart);
+    paymentMethod.addEventListener("change", updateCart);
+
+    categoryFilter.addEventListener("change", () => {
+      document.querySelectorAll(".chip").forEach(chip => {
+        chip.classList.toggle("active", chip.dataset.category === categoryFilter.value);
+      });
+      if(!categoryFilter.value){
+        const all = document.querySelector('.chip[data-category=""]');
+        if(all) all.classList.add("active");
+      }
+      renderProducts();
+    });
+
+    loadCustomer();
+    buildCategories();
+    renderProducts();
+    updateCart();
+  </script>
 </body>
 </html>
