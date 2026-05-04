@@ -7,17 +7,11 @@ from urllib.parse import quote, unquote
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "hogomart_master_v12_final_secret"
+app.secret_key = "hogomart_master_v12_premium_final"
 
-# =========================
-# ADMIN LOGIN
-# =========================
 ADMIN_USER = "Supergensolutions"
 ADMIN_PASS = "pranav12345"
 
-# =========================
-# FILES
-# =========================
 SHOPS_FILE = "shops_master.json"
 PRODUCTS_FILE = "products_master.json"
 ORDERS_FILE = "orders_master.json"
@@ -30,11 +24,6 @@ IMAGE_FOLDER = "static/product_images"
 os.makedirs(QR_FOLDER, exist_ok=True)
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
-# =========================
-# DEFAULT DATA
-# No default product images.
-# Images only if admin/shop uploads.
-# =========================
 default_shops = {
     "Sri Maarikamba Super Market": {
         "phone": "8123174562",
@@ -61,74 +50,24 @@ default_shops = {
 
 default_products = {
     "Sri Maarikamba Super Market": [
-        {
-            "name": "Milk",
-            "price": 50,
-            "stock": 20,
-            "barcode": "HM-MILK-001",
-            "category": "Grocery",
-            "image": "",
-            "tag": "Best Seller"
-        },
-        {
-            "name": "Rice",
-            "price": 100,
-            "stock": 15,
-            "barcode": "HM-RICE-001",
-            "category": "Grocery",
-            "image": "",
-            "tag": ""
-        },
-        {
-            "name": "Eggs",
-            "price": 60,
-            "stock": 30,
-            "barcode": "HM-EGGS-001",
-            "category": "Grocery",
-            "image": "",
-            "tag": "Fast Moving"
-        }
+        {"name": "Milk", "price": 50, "stock": 20, "barcode": "HM-MILK-001", "category": "Grocery", "image": "", "tag": "Best Seller"},
+        {"name": "Rice", "price": 100, "stock": 15, "barcode": "HM-RICE-001", "category": "Grocery", "image": "", "tag": ""},
+        {"name": "Eggs", "price": 60, "stock": 30, "barcode": "HM-EGGS-001", "category": "Grocery", "image": "", "tag": "Fast Moving"}
     ],
     "Pooja Store": [
-        {
-            "name": "Camphor",
-            "price": 30,
-            "stock": 20,
-            "barcode": "HM-POOJA-001",
-            "category": "Pooja",
-            "image": "",
-            "tag": ""
-        }
+        {"name": "Camphor", "price": 30, "stock": 20, "barcode": "HM-POOJA-001", "category": "Pooja", "image": "", "tag": ""}
     ],
     "Bakery": [
-        {
-            "name": "Cake",
-            "price": 200,
-            "stock": 5,
-            "barcode": "HM-CAKE-001",
-            "category": "Bakery",
-            "image": "",
-            "tag": "Best Seller"
-        }
+        {"name": "Cake", "price": 200, "stock": 5, "barcode": "HM-CAKE-001", "category": "Bakery", "image": "", "tag": "Best Seller"}
     ]
 }
 
 default_delivery = {
-    "ravi": {
-        "name": "Ravi",
-        "password": "1111",
-        "phone": "8123174562"
-    },
-    "manu": {
-        "name": "Manu",
-        "password": "2222",
-        "phone": "8123174562"
-    }
+    "ravi": {"name": "Ravi", "password": "1111", "phone": "8123174562"},
+    "manu": {"name": "Manu", "password": "2222", "phone": "8123174562"}
 }
 
-# =========================
-# JSON HELPERS
-# =========================
+
 def load_json(file_name, default_data):
     if not os.path.exists(file_name):
         save_json(file_name, default_data)
@@ -199,10 +138,7 @@ def normalize_data():
 
 def sort_products():
     for shop_name in products:
-        products[shop_name] = sorted(
-            products[shop_name],
-            key=lambda item: item.get("name", "").lower()
-        )
+        products[shop_name] = sorted(products[shop_name], key=lambda item: item.get("name", "").lower())
 
 
 def save_all():
@@ -219,9 +155,7 @@ normalize_data()
 sort_products()
 save_all()
 
-# =========================
-# FILE UPLOAD
-# =========================
+
 def upload_file(file):
     if file and file.filename:
         filename = secure_filename(str(int(time.time())) + "_" + file.filename)
@@ -237,9 +171,6 @@ def image_html(image_name, label="No Image"):
     return f"<div class='no-img'>{label}</div>"
 
 
-# =========================
-# QR HELPERS
-# =========================
 def make_order_qr(order_id):
     try:
         link = request.host_url.rstrip("/") + f"/bill/{order_id}"
@@ -250,10 +181,6 @@ def make_order_qr(order_id):
     img.save(os.path.join(QR_FOLDER, f"{order_id}.png"))
 
 
-# =========================
-# UI PAGE WRAPPER
-# All backend pages are mobile friendly.
-# =========================
 def page(title, body, refresh=False):
     refresh_script = ""
     if refresh:
@@ -285,19 +212,20 @@ def page(title, body, refresh=False):
 
             .top-logo {{
                 width: 100%;
-                border-radius: 18px;
+                border-radius: 20px;
                 margin-bottom: 14px;
             }}
 
-            h1, h2, h3 {{
-                margin-bottom: 10px;
+            h2 {{
+                margin-top: 8px;
+                font-size: 25px;
             }}
 
             input, textarea, select, button {{
                 width: 100%;
                 padding: 14px;
                 margin: 8px 0;
-                border-radius: 12px;
+                border-radius: 14px;
                 border: 1px solid #ccc;
                 font-size: 16px;
                 box-sizing: border-box;
@@ -306,11 +234,11 @@ def page(title, body, refresh=False):
             button, .btn {{
                 display: block;
                 width: 100%;
-                background: green;
+                background: linear-gradient(135deg, #0f8a3b, #19b65b);
                 color: white;
                 text-decoration: none;
                 text-align: center;
-                border-radius: 12px;
+                border-radius: 15px;
                 padding: 14px;
                 margin: 8px 0;
                 font-weight: bold;
@@ -332,26 +260,47 @@ def page(title, body, refresh=False):
 
             .card {{
                 background: #ffffff;
-                border: 1px solid #ddd;
-                border-radius: 16px;
-                padding: 14px;
-                margin: 12px 0;
-                box-shadow: 0 2px 8px #ddd;
+                border: 1px solid #eee;
+                border-radius: 18px;
+                padding: 15px;
+                margin: 13px 0;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            }}
+
+            .new-card {{
+                border: 2px solid #19b65b;
+                background: #f1fff5;
             }}
 
             .stat-grid {{
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 10px;
+                margin: 12px 0;
             }}
 
             .stat {{
                 background: #e8f5e9;
-                padding: 12px;
-                border-radius: 14px;
+                padding: 13px;
+                border-radius: 16px;
                 font-weight: bold;
                 text-align: center;
             }}
+
+            .status {{
+                display: inline-block;
+                padding: 5px 10px;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: bold;
+                background: #eeeeee;
+                margin: 5px 0;
+            }}
+
+            .pending {{ background: #fff3cd; color: #8a6d00; }}
+            .packed {{ background: #e3f2fd; color: #0d47a1; }}
+            .out {{ background: #ffe0b2; color: #e65100; }}
+            .delivered {{ background: #dcedc8; color: #33691e; }}
 
             .no-img {{
                 height: 140px;
@@ -388,11 +337,6 @@ def page(title, body, refresh=False):
             a {{
                 color: green;
                 font-weight: bold;
-            }}
-
-            .small {{
-                font-size: 14px;
-                color: #555;
             }}
 
             .badge {{
@@ -434,17 +378,24 @@ def page(title, body, refresh=False):
     """
 
 
-# =========================
-# HOME
-# =========================
+def status_badge(status):
+    css = "status"
+    if status == "Pending":
+        css += " pending"
+    elif status == "Packed":
+        css += " packed"
+    elif status == "Out for Delivery":
+        css += " out"
+    elif status == "Delivered":
+        css += " delivered"
+    return f"<span class='{css}'>{status}</span>"
+
+
 @app.route("/")
 def home():
     return render_template("index.html", shops=shops, products=products)
 
 
-# =========================
-# ORDER
-# =========================
 @app.route("/order", methods=["POST"])
 def order():
     order_id = str(int(time.time()))
@@ -468,7 +419,6 @@ def order():
     if not name or not phone or not address:
         return page("Error", "<p>Name, phone, and address are required.</p><a class='btn' href='/'>Back</a>")
 
-    # Stock check
     for cart_item in cart:
         shop = cart_item.get("shop", "")
         barcode = cart_item.get("barcode", "")
@@ -487,7 +437,6 @@ def order():
         if not found:
             return page("Error", "<p>One product was not found.</p><a class='btn' href='/'>Back</a>")
 
-    # Reduce stock
     for cart_item in cart:
         shop = cart_item.get("shop", "")
         barcode = cart_item.get("barcode", "")
@@ -538,9 +487,6 @@ def order():
     return redirect(f"/bill/{order_id}")
 
 
-# =========================
-# BILL
-# =========================
 @app.route("/bill/<order_id>")
 def bill(order_id):
     for order_data in orders:
@@ -586,6 +532,8 @@ def bill(order_id):
             <p><b>Address:</b> {order_data['address']}</p>
             <p><b>Date:</b> {order_data.get('created_at', '')}</p>
 
+            {status_badge(order_data['status'])}
+
             <table>
                 <tr>
                     <th>Shop</th>
@@ -601,7 +549,6 @@ def bill(order_id):
             <h3>Delivery: ₹{order_data['delivery_charge']}</h3>
             <h2>Total: ₹{order_data['total']}</h2>
 
-            <p><b>Status:</b> {order_data['status']}</p>
             <p><b>Payment:</b> {order_data['payment_method']} - {order_data['payment_status']}</p>
             <p><b>Delivery Boy:</b> {order_data.get('delivery_boy', 'Not Assigned')}</p>
 
@@ -625,9 +572,6 @@ def bill(order_id):
     return page("Not Found", "<p>Bill not found.</p><a class='btn' href='/'>Home</a>")
 
 
-# =========================
-# TRACKING
-# =========================
 @app.route("/track/<order_id>")
 def track(order_id):
     for order_data in orders:
@@ -653,9 +597,6 @@ def track(order_id):
     return page("Not Found", "<p>Order not found.</p><a class='btn' href='/'>Home</a>")
 
 
-# =========================
-# ADMIN LOGIN
-# =========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -680,9 +621,6 @@ def login():
     return page("Admin Login", body)
 
 
-# =========================
-# ADMIN DASHBOARD
-# =========================
 @app.route("/admin")
 def admin():
     if not session.get("admin"):
@@ -700,12 +638,23 @@ def admin():
         <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
     </audio>
 
+    <button onclick="enableSound()">🔔 Enable Order Sound</button>
+
     <script>
-        let oldCount = localStorage.getItem("hm_admin_order_count") || 0;
+        function enableSound() {{
+            localStorage.setItem("hm_admin_sound", "yes");
+            let test = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+            test.play().catch(function(){{}});
+            alert("Order sound enabled ✅");
+        }}
+
+        let oldCount = parseInt(localStorage.getItem("hm_admin_order_count") || "0");
         let newCount = {len(orders)};
-        if (newCount > oldCount) {{
+
+        if (localStorage.getItem("hm_admin_sound") === "yes" && newCount > oldCount) {{
             document.getElementById("notifySound").play().catch(function(){{}});
         }}
+
         localStorage.setItem("hm_admin_order_count", newCount);
         setTimeout(function(){{ location.reload(); }}, 7000);
     </script>
@@ -729,6 +678,7 @@ def admin():
 
     for index, order_data in enumerate(reversed(orders)):
         real_index = len(orders) - 1 - index
+        is_new = index == 0 and order_data.get("status") == "Pending"
 
         items = ", ".join([
             f"{item.get('name')} x{item.get('qty')} ({item.get('shop')})"
@@ -736,16 +686,17 @@ def admin():
         ])
 
         map_link = "https://www.google.com/maps/search/?api=1&query=" + quote(order_data["address"])
+        card_class = "card new-card" if is_new else "card"
 
         body += f"""
-        <div class="card">
+        <div class="{card_class}">
             <b>Order:</b> {order_data['id']}<br>
             <b>Name:</b> {order_data['name']}<br>
             <b>Phone:</b> {order_data['phone']}<br>
             <b>Address:</b> {order_data['address']}<br>
             <b>Items:</b> {items}<br>
             <b>Total:</b> ₹{order_data['total']}<br>
-            <b>Status:</b> {order_data['status']}<br>
+            {status_badge(order_data['status'])}<br>
             <b>Payment:</b> {order_data['payment_method']} - {order_data['payment_status']}<br>
             <b>Delivery:</b> {order_data.get('delivery_boy', 'Not Assigned')}<br>
             <b>COD:</b> {order_data.get('cod_collected', 'No')}<br>
@@ -768,12 +719,9 @@ def admin():
 
         body += "</div>"
 
-    return page("📊 Admin Dashboard", body, refresh=False)
+    return page("📊 Admin Dashboard", body)
 
 
-# =========================
-# MANAGE SHOPS
-# =========================
 @app.route("/admin-shops", methods=["GET", "POST"])
 def admin_shops():
     if not session.get("admin"):
@@ -855,9 +803,6 @@ def delete_shop(shop_name):
     return redirect("/admin-shops")
 
 
-# =========================
-# MANAGE PRODUCTS
-# =========================
 @app.route("/admin-products", methods=["GET", "POST"])
 def admin_products():
     if not session.get("admin"):
@@ -952,9 +897,6 @@ def delete_product(shop_name, index):
     return redirect("/admin-products")
 
 
-# =========================
-# SHOP LOGIN + DASHBOARD
-# =========================
 @app.route("/shop-login", methods=["GET", "POST"])
 def shop_login():
     if request.method == "POST":
@@ -1006,18 +948,31 @@ def shop_dashboard():
     today_sales = sum(order.get("total", 0) for _, order, _ in shop_orders if order.get("status") == "Delivered")
     pending_count = len([order for _, order, _ in shop_orders if order.get("status") != "Delivered"])
 
+    shop_key = shop_name.replace(" ", "_").replace("'", "")
+
     body = f"""
     <audio id="notifySound">
         <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
     </audio>
 
+    <button onclick="enableShopSound()">🔔 Enable Shop Sound</button>
+
     <script>
-        let oldCount = localStorage.getItem("hm_shop_{shop_name}_count") || 0;
+        function enableShopSound() {{
+            localStorage.setItem("hm_shop_sound_{shop_key}", "yes");
+            let test = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+            test.play().catch(function(){{}});
+            alert("Shop order sound enabled ✅");
+        }}
+
+        let oldCount = parseInt(localStorage.getItem("hm_shop_{shop_key}_count") || "0");
         let newCount = {len(shop_orders)};
-        if (newCount > oldCount) {{
+
+        if (localStorage.getItem("hm_shop_sound_{shop_key}") === "yes" && newCount > oldCount) {{
             document.getElementById("notifySound").play().catch(function(){{}});
         }}
-        localStorage.setItem("hm_shop_{shop_name}_count", newCount);
+
+        localStorage.setItem("hm_shop_{shop_key}_count", newCount);
         setTimeout(function(){{ location.reload(); }}, 7000);
     </script>
 
@@ -1045,7 +1000,7 @@ def shop_dashboard():
             <b>Phone:</b> {order_data['phone']}<br>
             <b>Address:</b> {order_data['address']}<br>
             <b>Items:</b> {items_text}<br>
-            <b>Status:</b> {order_data['status']}<br>
+            {status_badge(order_data['status'])}<br>
 
             <a class="btn" href="tel:{order_data['phone']}">Call Customer</a>
             <a href="/shop-status/{order_index}/Packed">Packed</a> |
@@ -1092,9 +1047,6 @@ def shop_logout():
     return redirect("/")
 
 
-# =========================
-# CUSTOMER LOGIN
-# =========================
 @app.route("/customer-login", methods=["GET", "POST"])
 def customer_login():
     if request.method == "POST":
@@ -1145,7 +1097,7 @@ def customer_dashboard():
             <div class="card">
                 <b>Order:</b> {order_data['id']}<br>
                 <b>Total:</b> ₹{order_data['total']}<br>
-                <b>Status:</b> {order_data['status']}<br>
+                {status_badge(order_data['status'])}<br>
                 <a href="/bill/{order_data['id']}">Bill</a> |
                 <a href="/track/{order_data['id']}">Track</a>
             </div>
@@ -1160,9 +1112,6 @@ def customer_logout():
     return redirect("/")
 
 
-# =========================
-# DELIVERY PARTNER ADMIN
-# =========================
 @app.route("/admin-delivery", methods=["GET", "POST"])
 def admin_delivery():
     if not session.get("admin"):
@@ -1218,9 +1167,6 @@ def delete_delivery(username):
     return redirect("/admin-delivery")
 
 
-# =========================
-# DELIVERY LOGIN + DASHBOARD
-# =========================
 @app.route("/delivery-login", methods=["GET", "POST"])
 def delivery_login():
     if request.method == "POST":
@@ -1269,7 +1215,7 @@ def delivery_dashboard():
                 <b>Phone:</b> {order_data['phone']}<br>
                 <b>Address:</b> {order_data['address']}<br>
                 <b>Total:</b> ₹{order_data['total']}<br>
-                <b>Status:</b> {order_data['status']}<br>
+                {status_badge(order_data['status'])}<br>
                 <b>COD:</b> {order_data.get('cod_collected', 'No')}<br>
 
                 <a class="btn" href="tel:{order_data['phone']}">Call Customer</a>
@@ -1314,9 +1260,6 @@ def delivery_logout():
     return redirect("/")
 
 
-# =========================
-# ADMIN ACTIONS
-# =========================
 @app.route("/assign/<int:index>/<delivery_username>")
 def assign(index, delivery_username):
     if not session.get("admin"):
@@ -1371,9 +1314,6 @@ def logout():
     return redirect("/")
 
 
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
