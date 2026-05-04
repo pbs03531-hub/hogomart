@@ -1,1319 +1,1258 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, send_file
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from datetime import datetime
+from pathlib import Path
+from io import BytesIO
 import json
 import os
-import time
-import qrcode
-from urllib.parse import quote, unquote
-from werkzeug.utils import secure_filename
+import uuid
+import math
+import urllib.parse
+
+try:
+    import qrcode
+except Exception:
+    qrcode = None
 
 app = Flask(__name__)
-app.secret_key = "hogomart_master_v12_premium_final"
+app.secret_key = os.environ.get("HOGOMART_SECRET_KEY", "hogomart-dev-secret-change-this")
 
-ADMIN_USER = "Supergensolutions"
-ADMIN_PASS = "pranav12345"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
 
-SHOPS_FILE = "shops_master.json"
-PRODUCTS_FILE = "products_master.json"
-ORDERS_FILE = "orders_master.json"
-CUSTOMERS_FILE = "customers_master.json"
-DELIVERY_FILE = "delivery_master.json"
+SHOPS_FILE = DATA_DIR / "shops.json"
+PRODUCTS_FILE = DATA_DIR / "products.json"
+ORDERS_FILE = DATA_DIR / "orders.json"
+CUSTOMERS_FILE = DATA_DIR / "customers.json"
+DELIVERY_FILE = DATA_DIR / "delivery.json"
+NOTIFICATIONS_FILE = DATA_DIR / "notifications.json"
+SETTINGS_FILE = DATA_DIR / "settings.json"
 
-QR_FOLDER = "static/qrcodes"
-IMAGE_FOLDER = "static/product_images"
+ORDER_STATUSES = [
+    "Pending",
+    "Accepted",
+    "Preparing",
+    "Out for Delivery",
+    "Completed",
+    "Cancelled",
+]
 
-os.makedirs(QR_FOLDER, exist_ok=True)
-os.makedirs(IMAGE_FOLDER, exist_ok=True)
+COMMISSION_PLANS = {
+    "Free": {"commission": 7, "yearly_price": 0},
+    "Growth": {"commission": 5, "yearly_price": 1999},
+    "Pro": {"commission": 4, "yearly_price": 3999},
+    "Elite": {"commission": 3, "yearly_price": 6999},
+}
 
-default_shops = {
-    "Sri Maarikamba Super Market": {
-        "phone": "8123174562",
-        "category": "Supermarket",
-        "image": "",
+DEFAULT_SETTINGS = {
+    "admin_username": "admin",
+    "admin_password_hash": generate_password_hash("admin123"),
+    "platform_name": "HogoMart",
+    "currency": "₹",
+    "delivery_fee": 30,
+    "platform_fee": 5,
+    "upi_id": "hogomart@upi",
+    "upi_name": "HogoMart",
+    "support_phone": "9876543210",
+    "commission_plans": COMMISSION_PLANS,
+}
+
+DEFAULT_SHOPS = [
+    {
+        "id": "shop_001",
+        "name": "Sri Maarikamba Super Market",
         "username": "supermarket",
-        "password": "1111"
+        "password_hash": generate_password_hash("shop123"),
+        "phone": "9876543210",
+        "address": "Main Road, Virajpet, Kodagu",
+        "category": "Supermarket",
+        "plan": "Free",
+        "verified": True,
+        "featured": True,
+        "rating": 4.7,
+        "delivery_time": "25-35 min",
+        "active": True,
+        "created_at": datetime.now().isoformat(),
     },
-    "Pooja Store": {
-        "phone": "8123174562",
-        "category": "Pooja",
-        "image": "",
-        "username": "pooja",
-        "password": "2222"
+    {
+        "id": "shop_002",
+        "name": "Coorg Gift Gallery",
+        "username": "giftshop",
+        "password_hash": generate_password_hash("shop123"),
+        "phone": "9876500000",
+        "address": "Market Street, Virajpet",
+        "category": "Gift Shop",
+        "plan": "Growth",
+        "verified": True,
+        "featured": False,
+        "rating": 4.5,
+        "delivery_time": "30-45 min",
+        "active": True,
+        "created_at": datetime.now().isoformat(),
     },
-    "Bakery": {
-        "phone": "8123174562",
-        "category": "Bakery",
-        "image": "",
-        "username": "bakery",
-        "password": "3333"
-    }
-}
+]
 
-default_products = {
-    "Sri Maarikamba Super Market": [
-        {"name": "Milk", "price": 50, "stock": 20, "barcode": "HM-MILK-001", "category": "Grocery", "image": "", "tag": "Best Seller"},
-        {"name": "Rice", "price": 100, "stock": 15, "barcode": "HM-RICE-001", "category": "Grocery", "image": "", "tag": ""},
-        {"name": "Eggs", "price": 60, "stock": 30, "barcode": "HM-EGGS-001", "category": "Grocery", "image": "", "tag": "Fast Moving"}
-    ],
-    "Pooja Store": [
-        {"name": "Camphor", "price": 30, "stock": 20, "barcode": "HM-POOJA-001", "category": "Pooja", "image": "", "tag": ""}
-    ],
-    "Bakery": [
-        {"name": "Cake", "price": 200, "stock": 5, "barcode": "HM-CAKE-001", "category": "Bakery", "image": "", "tag": "Best Seller"}
-    ]
-}
+DEFAULT_PRODUCTS = [
+    {
+        "id": "prod_001",
+        "shop_id": "shop_001",
+        "name": "Rice 5kg",
+        "category": "Groceries",
+        "price": 330,
+        "mrp": 360,
+        "stock": 30,
+        "offer": "₹30 OFF",
+        "tags": ["Best seller"],
+        "description": "Premium quality rice pack.",
+        "active": True,
+        "created_at": datetime.now().isoformat(),
+    },
+    {
+        "id": "prod_002",
+        "shop_id": "shop_001",
+        "name": "Sunflower Oil 1L",
+        "category": "Groceries",
+        "price": 145,
+        "mrp": 160,
+        "stock": 25,
+        "offer": "Limited offer",
+        "tags": ["Trending"],
+        "description": "Cooking oil for daily use.",
+        "active": True,
+        "created_at": datetime.now().isoformat(),
+    },
+    {
+        "id": "prod_003",
+        "shop_id": "shop_002",
+        "name": "Birthday Gift Box",
+        "category": "Gifts",
+        "price": 499,
+        "mrp": 599,
+        "stock": 12,
+        "offer": "₹100 OFF",
+        "tags": ["Best seller", "Trending"],
+        "description": "Premium ready gift box.",
+        "active": True,
+        "created_at": datetime.now().isoformat(),
+    },
+]
 
-default_delivery = {
-    "ravi": {"name": "Ravi", "password": "1111", "phone": "8123174562"},
-    "manu": {"name": "Manu", "password": "2222", "phone": "8123174562"}
-}
+DEFAULT_DELIVERY = [
+    {
+        "id": "delivery_001",
+        "name": "Ravi",
+        "username": "ravi",
+        "password_hash": generate_password_hash("delivery123"),
+        "phone": "9000000001",
+        "active": True,
+        "created_at": datetime.now().isoformat(),
+    },
+    {
+        "id": "delivery_002",
+        "name": "Kiran",
+        "username": "kiran",
+        "password_hash": generate_password_hash("delivery123"),
+        "phone": "9000000002",
+        "active": True,
+        "created_at": datetime.now().isoformat(),
+    },
+]
 
 
-def load_json(file_name, default_data):
-    if not os.path.exists(file_name):
-        save_json(file_name, default_data)
-        return default_data
-
+def read_json(path, default):
+    if not path.exists():
+        write_json(path, default)
+        return default
     try:
-        with open(file_name, "r", encoding="utf-8") as file:
-            return json.load(file)
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if data is not None else default
     except Exception:
-        return default_data
+        write_json(path, default)
+        return default
 
 
-def save_json(file_name, data):
-    with open(file_name, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=4, ensure_ascii=False)
+def write_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-shops = load_json(SHOPS_FILE, default_shops)
-products = load_json(PRODUCTS_FILE, default_products)
-orders = load_json(ORDERS_FILE, [])
-customers = load_json(CUSTOMERS_FILE, {})
-delivery_partners = load_json(DELIVERY_FILE, default_delivery)
+def now():
+    return datetime.now().isoformat(timespec="seconds")
 
 
-def normalize_data():
-    for shop_name, shop in shops.items():
-        shop.setdefault("phone", "")
-        shop.setdefault("category", "General")
-        shop.setdefault("image", "")
-        shop.setdefault("username", shop_name.lower().replace(" ", ""))
-        shop.setdefault("password", "1234")
+def money(value):
+    try:
+        return round(float(value), 2)
+    except Exception:
+        return 0.0
 
-    for shop_name in shops:
-        products.setdefault(shop_name, [])
 
-    for shop_name, items in products.items():
-        for item in items:
-            item.setdefault("name", "")
-            item.setdefault("price", 0)
-            item.setdefault("stock", 0)
-            item.setdefault("barcode", f"HM-{int(time.time())}")
-            item.setdefault("category", "General")
-            item.setdefault("image", "")
-            item.setdefault("tag", "")
+def new_id(prefix):
+    return f"{prefix}_{uuid.uuid4().hex[:10]}"
 
+
+def get_settings():
+    data = read_json(SETTINGS_FILE, DEFAULT_SETTINGS)
+    for k, v in DEFAULT_SETTINGS.items():
+        data.setdefault(k, v)
+    return data
+
+
+def get_shops():
+    shops = read_json(SHOPS_FILE, DEFAULT_SHOPS)
+    changed = False
+    for shop in shops:
+        defaults = {
+            "id": new_id("shop"),
+            "name": "Unnamed Shop",
+            "username": "",
+            "password_hash": generate_password_hash("shop123"),
+            "phone": "",
+            "address": "",
+            "category": "Local Shop",
+            "plan": "Free",
+            "verified": False,
+            "featured": False,
+            "rating": 4.0,
+            "delivery_time": "30-45 min",
+            "active": True,
+            "created_at": now(),
+        }
+        for k, v in defaults.items():
+            if k not in shop:
+                shop[k] = v
+                changed = True
+    if changed:
+        write_json(SHOPS_FILE, shops)
+    return shops
+
+
+def save_shops(shops):
+    write_json(SHOPS_FILE, shops)
+
+
+def get_products():
+    products = read_json(PRODUCTS_FILE, DEFAULT_PRODUCTS)
+    changed = False
+    for product in products:
+        defaults = {
+            "id": new_id("prod"),
+            "shop_id": "",
+            "name": "Unnamed Product",
+            "category": "General",
+            "price": 0,
+            "mrp": 0,
+            "stock": 0,
+            "offer": "",
+            "tags": [],
+            "description": "",
+            "active": True,
+            "created_at": now(),
+        }
+        for k, v in defaults.items():
+            if k not in product:
+                product[k] = v
+                changed = True
+        product["price"] = money(product.get("price"))
+        product["mrp"] = money(product.get("mrp"))
+        try:
+            product["stock"] = int(product.get("stock", 0))
+        except Exception:
+            product["stock"] = 0
+        if not isinstance(product.get("tags"), list):
+            product["tags"] = [str(product.get("tags"))]
+    if changed:
+        write_json(PRODUCTS_FILE, products)
+    return products
+
+
+def save_products(products):
+    write_json(PRODUCTS_FILE, products)
+
+
+def get_orders():
+    orders = read_json(ORDERS_FILE, [])
+    changed = False
     for order in orders:
-        order.setdefault("id", str(int(time.time())))
-        order.setdefault("name", "")
-        order.setdefault("phone", "")
-        order.setdefault("address", "")
-        order.setdefault("cart", [])
-        order.setdefault("subtotal", 0)
-        order.setdefault("delivery_charge", 0)
-        order.setdefault("total", 0)
-        order.setdefault("status", "Pending")
-        order.setdefault("payment_method", "COD")
-        order.setdefault("payment_status", "Not Paid")
-        order.setdefault("delivery_boy", "Not Assigned")
-        order.setdefault("cod_collected", "No")
-        order.setdefault("note", "")
-        order.setdefault("created_at", time.strftime("%Y-%m-%d %H:%M:%S"))
-
-    for username, data in delivery_partners.items():
-        data.setdefault("name", username.title())
-        data.setdefault("password", "1234")
-        data.setdefault("phone", "")
-
-
-def sort_products():
-    for shop_name in products:
-        products[shop_name] = sorted(products[shop_name], key=lambda item: item.get("name", "").lower())
-
-
-def save_all():
-    normalize_data()
-    sort_products()
-    save_json(SHOPS_FILE, shops)
-    save_json(PRODUCTS_FILE, products)
-    save_json(ORDERS_FILE, orders)
-    save_json(CUSTOMERS_FILE, customers)
-    save_json(DELIVERY_FILE, delivery_partners)
+        defaults = {
+            "id": new_id("order"),
+            "customer": {},
+            "items": [],
+            "shop_orders": [],
+            "payment_method": "COD",
+            "payment_paid": False,
+            "cod_collected": False,
+            "delivery_partner_id": "",
+            "status": "Pending",
+            "subtotal": 0,
+            "delivery_fee": 0,
+            "platform_fee": 0,
+            "total": 0,
+            "commission_total": 0,
+            "upi_link": "",
+            "maps_link": "",
+            "whatsapp_text": "",
+            "created_at": now(),
+            "updated_at": now(),
+            "status_history": [],
+        }
+        for k, v in defaults.items():
+            if k not in order:
+                order[k] = v
+                changed = True
+    if changed:
+        write_json(ORDERS_FILE, orders)
+    return orders
 
 
-normalize_data()
-sort_products()
-save_all()
+def save_orders(orders):
+    write_json(ORDERS_FILE, orders)
 
 
-def upload_file(file):
-    if file and file.filename:
-        filename = secure_filename(str(int(time.time())) + "_" + file.filename)
-        path = os.path.join(IMAGE_FOLDER, filename)
-        file.save(path)
-        return filename
-    return ""
+def get_customers():
+    return read_json(CUSTOMERS_FILE, [])
 
 
-def image_html(image_name, label="No Image"):
-    if image_name:
-        return f"<img src='/static/product_images/{image_name}' class='item-img'>"
-    return f"<div class='no-img'>{label}</div>"
+def save_customers(customers):
+    write_json(CUSTOMERS_FILE, customers)
 
 
-def make_order_qr(order_id):
-    try:
-        link = request.host_url.rstrip("/") + f"/bill/{order_id}"
-    except Exception:
-        link = f"http://127.0.0.1:5000/bill/{order_id}"
-
-    img = qrcode.make(link)
-    img.save(os.path.join(QR_FOLDER, f"{order_id}.png"))
-
-
-def page(title, body, refresh=False):
-    refresh_script = ""
-    if refresh:
-        refresh_script = "<script>setTimeout(function(){ location.reload(); }, 7000);</script>"
-
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>HogoMart</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background: #f4f6f8;
-                margin: 0;
-                font-size: 17px;
-            }}
-
-            .box {{
-                max-width: 430px;
-                margin: auto;
-                background: white;
-                min-height: 100vh;
-                padding: 16px;
-                box-sizing: border-box;
-            }}
-
-            .top-logo {{
-                width: 100%;
-                border-radius: 20px;
-                margin-bottom: 14px;
-            }}
-
-            h2 {{
-                margin-top: 8px;
-                font-size: 25px;
-            }}
-
-            input, textarea, select, button {{
-                width: 100%;
-                padding: 14px;
-                margin: 8px 0;
-                border-radius: 14px;
-                border: 1px solid #ccc;
-                font-size: 16px;
-                box-sizing: border-box;
-            }}
-
-            button, .btn {{
-                display: block;
-                width: 100%;
-                background: linear-gradient(135deg, #0f8a3b, #19b65b);
-                color: white;
-                text-decoration: none;
-                text-align: center;
-                border-radius: 15px;
-                padding: 14px;
-                margin: 8px 0;
-                font-weight: bold;
-                border: none;
-                box-sizing: border-box;
-            }}
-
-            .btn-red {{
-                background: #d32f2f;
-            }}
-
-            .btn-blue {{
-                background: #1976d2;
-            }}
-
-            .btn-orange {{
-                background: #f57c00;
-            }}
-
-            .card {{
-                background: #ffffff;
-                border: 1px solid #eee;
-                border-radius: 18px;
-                padding: 15px;
-                margin: 13px 0;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            }}
-
-            .new-card {{
-                border: 2px solid #19b65b;
-                background: #f1fff5;
-            }}
-
-            .stat-grid {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-                margin: 12px 0;
-            }}
-
-            .stat {{
-                background: #e8f5e9;
-                padding: 13px;
-                border-radius: 16px;
-                font-weight: bold;
-                text-align: center;
-            }}
-
-            .status {{
-                display: inline-block;
-                padding: 5px 10px;
-                border-radius: 10px;
-                font-size: 13px;
-                font-weight: bold;
-                background: #eeeeee;
-                margin: 5px 0;
-            }}
-
-            .pending {{ background: #fff3cd; color: #8a6d00; }}
-            .packed {{ background: #e3f2fd; color: #0d47a1; }}
-            .out {{ background: #ffe0b2; color: #e65100; }}
-            .delivered {{ background: #dcedc8; color: #33691e; }}
-
-            .no-img {{
-                height: 140px;
-                background: #eeeeee;
-                border-radius: 14px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #777;
-                font-weight: bold;
-                margin-bottom: 10px;
-            }}
-
-            .item-img {{
-                width: 100%;
-                height: 160px;
-                object-fit: cover;
-                border-radius: 14px;
-                margin-bottom: 10px;
-            }}
-
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 14px;
-            }}
-
-            th, td {{
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }}
-
-            a {{
-                color: green;
-                font-weight: bold;
-            }}
-
-            .badge {{
-                display: inline-block;
-                background: orange;
-                color: white;
-                border-radius: 8px;
-                padding: 4px 8px;
-                font-size: 13px;
-                margin: 3px 0;
-            }}
-
-            @media print {{
-                .no-print {{
-                    display: none;
-                }}
-
-                .box {{
-                    max-width: none;
-                    min-height: auto;
-                }}
-
-                .top-logo {{
-                    width: 200px;
-                }}
-            }}
-        </style>
-        {refresh_script}
-    </head>
-
-    <body>
-        <div class="box">
-            <img src="/static/logo.png" class="top-logo">
-            <h2>{title}</h2>
-            {body}
-        </div>
-    </body>
-    </html>
-    """
+def get_delivery_partners():
+    partners = read_json(DELIVERY_FILE, DEFAULT_DELIVERY)
+    changed = False
+    for p in partners:
+        defaults = {
+            "id": new_id("delivery"),
+            "name": "Delivery Partner",
+            "username": "",
+            "password_hash": generate_password_hash("delivery123"),
+            "phone": "",
+            "active": True,
+            "created_at": now(),
+        }
+        for k, v in defaults.items():
+            if k not in p:
+                p[k] = v
+                changed = True
+    if changed:
+        write_json(DELIVERY_FILE, partners)
+    return partners
 
 
-def status_badge(status):
-    css = "status"
-    if status == "Pending":
-        css += " pending"
-    elif status == "Packed":
-        css += " packed"
-    elif status == "Out for Delivery":
-        css += " out"
-    elif status == "Delivered":
-        css += " delivered"
-    return f"<span class='{css}'>{status}</span>"
+def save_delivery_partners(partners):
+    write_json(DELIVERY_FILE, partners)
+
+
+def get_notifications():
+    return read_json(NOTIFICATIONS_FILE, [])
+
+
+def save_notifications(items):
+    write_json(NOTIFICATIONS_FILE, items[-200:])
+
+
+def add_notification(role, title, message, target_id="", order_id=""):
+    notifications = get_notifications()
+    item = {
+        "id": new_id("notif"),
+        "role": role,
+        "target_id": target_id,
+        "order_id": order_id,
+        "title": title,
+        "message": message,
+        "read": False,
+        "created_at": now(),
+    }
+    notifications.append(item)
+    save_notifications(notifications)
+    return item
+
+
+def find_shop(shop_id):
+    return next((s for s in get_shops() if s.get("id") == shop_id), None)
+
+
+def find_product(product_id):
+    return next((p for p in get_products() if p.get("id") == product_id), None)
+
+
+def find_delivery_partner(partner_id):
+    return next((p for p in get_delivery_partners() if p.get("id") == partner_id), None)
+
+
+def current_cart():
+    session.setdefault("cart", {})
+    return session["cart"]
+
+
+def cart_count():
+    cart = current_cart()
+    return sum(int(item.get("qty", 0)) for item in cart.values())
+
+
+def shop_commission_rate(shop):
+    plan = shop.get("plan", "Free")
+    return COMMISSION_PLANS.get(plan, COMMISSION_PLANS["Free"])["commission"]
+
+
+def calculate_cart_bill(cart):
+    settings = get_settings()
+    products = get_products()
+    shops = get_shops()
+    product_map = {p["id"]: p for p in products}
+    shop_map = {s["id"]: s for s in shops}
+
+    items = []
+    subtotal = 0
+
+    for product_id, cart_item in cart.items():
+        product = product_map.get(product_id)
+        if not product or not product.get("active", True):
+            continue
+        qty = max(1, int(cart_item.get("qty", 1)))
+        price = money(product.get("price"))
+        line_total = money(price * qty)
+        subtotal += line_total
+        shop = shop_map.get(product.get("shop_id", ""))
+        items.append({
+            "product_id": product_id,
+            "shop_id": product.get("shop_id", ""),
+            "shop_name": shop.get("name", "Unknown Shop") if shop else "Unknown Shop",
+            "name": product.get("name", ""),
+            "category": product.get("category", ""),
+            "price": price,
+            "qty": qty,
+            "line_total": line_total,
+        })
+
+    delivery_fee = money(settings.get("delivery_fee", 0)) if subtotal > 0 else 0
+    platform_fee = money(settings.get("platform_fee", 0)) if subtotal > 0 else 0
+    total = money(subtotal + delivery_fee + platform_fee)
+
+    return {
+        "items": items,
+        "subtotal": money(subtotal),
+        "delivery_fee": delivery_fee,
+        "platform_fee": platform_fee,
+        "total": total,
+    }
+
+
+def build_shop_orders(items):
+    shops = get_shops()
+    shop_map = {s["id"]: s for s in shops}
+    grouped = {}
+
+    for item in items:
+        grouped.setdefault(item["shop_id"], {
+            "shop_id": item["shop_id"],
+            "shop_name": item["shop_name"],
+            "items": [],
+            "subtotal": 0,
+            "commission_rate": 7,
+            "commission_amount": 0,
+            "vendor_earning": 0,
+            "status": "Pending",
+        })
+        grouped[item["shop_id"]]["items"].append(item)
+        grouped[item["shop_id"]]["subtotal"] += item["line_total"]
+
+    for shop_id, data in grouped.items():
+        shop = shop_map.get(shop_id, {})
+        rate = shop_commission_rate(shop)
+        commission = money(data["subtotal"] * rate / 100)
+        data["subtotal"] = money(data["subtotal"])
+        data["commission_rate"] = rate
+        data["commission_amount"] = commission
+        data["vendor_earning"] = money(data["subtotal"] - commission)
+
+    return list(grouped.values())
+
+
+def create_upi_link(order_id, amount):
+    settings = get_settings()
+    pa = settings.get("upi_id", "")
+    pn = settings.get("upi_name", "HogoMart")
+    note = f"HogoMart Order {order_id}"
+    params = {
+        "pa": pa,
+        "pn": pn,
+        "am": str(money(amount)),
+        "cu": "INR",
+        "tn": note,
+    }
+    return "upi://pay?" + urllib.parse.urlencode(params)
+
+
+def create_maps_link(address):
+    return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote_plus(address or "")
+
+
+def create_whatsapp_text(order):
+    lines = [
+        f"🛒 HogoMart Order #{order.get('id')}",
+        f"Customer: {order.get('customer', {}).get('name', '')}",
+        f"Phone: {order.get('customer', {}).get('phone', '')}",
+        f"Address: {order.get('customer', {}).get('address', '')}",
+        "",
+        "Items:",
+    ]
+    for item in order.get("items", []):
+        lines.append(f"- {item.get('name')} x {item.get('qty')} = ₹{item.get('line_total')}")
+    lines += [
+        "",
+        f"Subtotal: ₹{order.get('subtotal')}",
+        f"Delivery Fee: ₹{order.get('delivery_fee')}",
+        f"Platform Fee: ₹{order.get('platform_fee')}",
+        f"Total: ₹{order.get('total')}",
+        f"Payment: {order.get('payment_method')}",
+        f"Status: {order.get('status')}",
+    ]
+    return "\n".join(lines)
+
+
+def save_customer(customer):
+    customers = get_customers()
+    phone = customer.get("phone", "")
+    old = next((c for c in customers if c.get("phone") == phone), None)
+    if old:
+        old.update(customer)
+        old["updated_at"] = now()
+    else:
+        customer["id"] = new_id("cust")
+        customer["created_at"] = now()
+        customer["updated_at"] = now()
+        customers.append(customer)
+    save_customers(customers)
+
+
+def login_required(role):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            if session.get("role") != role:
+                return redirect(url_for("login", role=role))
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@app.context_processor
+def inject_globals():
+    return {
+        "settings": get_settings(),
+        "cart_count": cart_count(),
+        "commission_plans": COMMISSION_PLANS,
+    }
 
 
 @app.route("/")
-def home():
-    return render_template("index.html", shops=shops, products=products)
+def index():
+    shops = sorted(get_shops(), key=lambda s: (not s.get("featured", False), s.get("name", "").lower()))
+    products = sorted(
+        [p for p in get_products() if p.get("active", True) and find_shop(p.get("shop_id"))],
+        key=lambda p: p.get("name", "").lower()
+    )
+    q = request.args.get("q", "").strip().lower()
+    category = request.args.get("category", "").strip().lower()
+
+    if q:
+        products = [p for p in products if q in p.get("name", "").lower() or q in p.get("category", "").lower()]
+        shops = [s for s in shops if q in s.get("name", "").lower() or q in s.get("category", "").lower()]
+    if category:
+        products = [p for p in products if category == p.get("category", "").lower()]
+
+    return render_template("index.html", shops=shops, products=products, q=q)
 
 
-@app.route("/order", methods=["POST"])
-def order():
-    order_id = str(int(time.time()))
-
-    name = request.form.get("customer_name", "").strip()
-    phone = request.form.get("phone", "").strip()
-    address = request.form.get("address", "").strip()
-    payment_method = request.form.get("payment_method", "COD")
-    distance = request.form.get("distance", "within_2km")
-    note = request.form.get("special_request", "")
-    emergency = request.form.get("emergency") == "yes"
-
-    try:
-        cart = json.loads(request.form.get("cart_data", "[]"))
-    except Exception:
-        cart = []
-
-    if not cart:
-        return page("Error", "<p>Please select at least one product.</p><a class='btn' href='/'>Back</a>")
-
-    if not name or not phone or not address:
-        return page("Error", "<p>Name, phone, and address are required.</p><a class='btn' href='/'>Back</a>")
-
-    for cart_item in cart:
-        shop = cart_item.get("shop", "")
-        barcode = cart_item.get("barcode", "")
-        qty = int(cart_item.get("qty", 1))
-
-        found = False
-        for product in products.get(shop, []):
-            if product.get("barcode") == barcode:
-                found = True
-                if qty > int(product.get("stock", 0)):
-                    return page(
-                        "Stock Error",
-                        f"<p>{product.get('name')} has only {product.get('stock')} left.</p><a class='btn' href='/'>Back</a>"
-                    )
-
-        if not found:
-            return page("Error", "<p>One product was not found.</p><a class='btn' href='/'>Back</a>")
-
-    for cart_item in cart:
-        shop = cart_item.get("shop", "")
-        barcode = cart_item.get("barcode", "")
-        qty = int(cart_item.get("qty", 1))
-
-        for product in products.get(shop, []):
-            if product.get("barcode") == barcode:
-                product["stock"] = max(0, int(product.get("stock", 0)) - qty)
-
-    subtotal = sum(int(item.get("price", 0)) * int(item.get("qty", 1)) for item in cart)
-
-    delivery_charge = 20 if distance == "within_2km" else 40
-    if emergency:
-        delivery_charge += 20
-
-    total = subtotal + delivery_charge
-
-    payment_status = "COD Accepted" if payment_method == "COD" else "Not Paid"
-
-    new_order = {
-        "id": order_id,
-        "name": name,
-        "phone": phone,
-        "address": address,
-        "cart": cart,
-        "note": note,
-        "subtotal": subtotal,
-        "delivery_charge": delivery_charge,
-        "total": total,
-        "status": "Pending",
-        "payment_method": payment_method,
-        "payment_status": payment_status,
-        "delivery_boy": "Not Assigned",
-        "cod_collected": "No",
-        "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
-    }
-
-    orders.append(new_order)
-    customers[phone] = {
-        "name": name,
-        "phone": phone,
-        "address": address
-    }
-
-    save_all()
-    make_order_qr(order_id)
-
-    return redirect(f"/bill/{order_id}")
+@app.route("/shop/<shop_id>")
+def shop_page(shop_id):
+    shop = find_shop(shop_id)
+    if not shop:
+        return render_template("404.html"), 404
+    products = sorted(
+        [p for p in get_products() if p.get("shop_id") == shop_id and p.get("active", True)],
+        key=lambda p: p.get("name", "").lower()
+    )
+    return render_template("shop.html", shop=shop, products=products)
 
 
-@app.route("/bill/<order_id>")
-def bill(order_id):
-    for order_data in orders:
-        if order_data["id"] == order_id:
-            rows = ""
-            for item in order_data["cart"]:
-                rows += f"""
-                <tr>
-                    <td>{item.get('shop')}</td>
-                    <td>{item.get('name')}</td>
-                    <td>₹{item.get('price')}</td>
-                    <td>{item.get('qty')}</td>
-                    <td>₹{int(item.get('price', 0)) * int(item.get('qty', 1))}</td>
-                </tr>
-                """
+@app.route("/cart")
+def cart_page():
+    bill = calculate_cart_bill(current_cart())
+    return render_template("cart.html", bill=bill)
 
-            tracking_link = request.host_url.rstrip("/") + f"/track/{order_id}"
 
-            items_text = ", ".join([
-                f"{item.get('name')} x {item.get('qty')} ({item.get('shop')})"
-                for item in order_data["cart"]
-            ])
+@app.route("/cart/add/<product_id>", methods=["POST", "GET"])
+def add_to_cart(product_id):
+    product = find_product(product_id)
+    if not product:
+        return jsonify({"success": False, "message": "Product not found"}), 404
 
-            whatsapp_msg = quote(
-                f"HogoMart Order\n"
-                f"Order ID: {order_data['id']}\n"
-                f"Name: {order_data['name']}\n"
-                f"Phone: {order_data['phone']}\n"
-                f"Address: {order_data['address']}\n"
-                f"Items: {items_text}\n"
-                f"Subtotal: ₹{order_data['subtotal']}\n"
-                f"Delivery: ₹{order_data['delivery_charge']}\n"
-                f"Total: ₹{order_data['total']}\n"
-                f"Track: {tracking_link}"
-            )
+    qty = int(request.form.get("qty", request.args.get("qty", 1)) or 1)
+    qty = max(1, qty)
 
-            upi_link = f"upi://pay?pa=8123174562@fam&pn=HogoMart&am={order_data['total']}&cu=INR"
+    cart = current_cart()
+    if product_id in cart:
+        cart[product_id]["qty"] = int(cart[product_id].get("qty", 0)) + qty
+    else:
+        cart[product_id] = {"product_id": product_id, "qty": qty}
 
-            body = f"""
-            <p><b>Order ID:</b> {order_data['id']}</p>
-            <p><b>Name:</b> {order_data['name']}</p>
-            <p><b>Phone:</b> {order_data['phone']}</p>
-            <p><b>Address:</b> {order_data['address']}</p>
-            <p><b>Date:</b> {order_data.get('created_at', '')}</p>
+    session["cart"] = cart
+    session.modified = True
 
-            {status_badge(order_data['status'])}
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.path.startswith("/api"):
+        return jsonify({"success": True, "cart_count": cart_count()})
+    return redirect(request.referrer or url_for("index"))
 
-            <table>
-                <tr>
-                    <th>Shop</th>
-                    <th>Item</th>
-                    <th>Price</th>
-                    <th>Qty</th>
-                    <th>Total</th>
-                </tr>
-                {rows}
-            </table>
 
-            <h3>Subtotal: ₹{order_data['subtotal']}</h3>
-            <h3>Delivery: ₹{order_data['delivery_charge']}</h3>
-            <h2>Total: ₹{order_data['total']}</h2>
+@app.route("/cart/update", methods=["POST"])
+def update_cart():
+    product_id = request.form.get("product_id")
+    qty = int(request.form.get("qty", 1) or 1)
+    cart = current_cart()
+    if product_id in cart:
+        if qty <= 0:
+            cart.pop(product_id)
+        else:
+            cart[product_id]["qty"] = qty
+    session["cart"] = cart
+    session.modified = True
+    return redirect(url_for("cart_page"))
 
-            <p><b>Payment:</b> {order_data['payment_method']} - {order_data['payment_status']}</p>
-            <p><b>Delivery Boy:</b> {order_data.get('delivery_boy', 'Not Assigned')}</p>
 
-            <h3>Order QR</h3>
-            <img src="/static/qrcodes/{order_id}.png" width="180">
+@app.route("/cart/remove/<product_id>")
+def remove_from_cart(product_id):
+    cart = current_cart()
+    cart.pop(product_id, None)
+    session["cart"] = cart
+    session.modified = True
+    return redirect(url_for("cart_page"))
 
-            <h3>Your Payment QR</h3>
-            <img src="/static/qr.png" width="220">
 
-            <div class="no-print">
-                <button onclick="window.print()">Print / Save PDF</button>
-                <a class="btn" href="{upi_link}">Pay Now UPI</a>
-                <a class="btn" href="https://wa.me/918123174562?text={whatsapp_msg}" target="_blank">Send WhatsApp Backup</a>
-                <a class="btn" href="/track/{order_id}">Track Order</a>
-                <a class="btn" href="/">Back Home</a>
-            </div>
-            """
+@app.route("/checkout", methods=["GET", "POST"])
+def checkout():
+    bill = calculate_cart_bill(current_cart())
+    if not bill["items"]:
+        return redirect(url_for("index"))
 
-            return page("🧾 HogoMart Bill", body)
+    if request.method == "POST":
+        customer = {
+            "name": request.form.get("name", "").strip(),
+            "phone": request.form.get("phone", "").strip(),
+            "address": request.form.get("address", "").strip(),
+            "landmark": request.form.get("landmark", "").strip(),
+        }
 
-    return page("Not Found", "<p>Bill not found.</p><a class='btn' href='/'>Home</a>")
+        if not customer["name"] or not customer["phone"] or not customer["address"]:
+            flash("Please fill name, phone and address.")
+            return render_template("checkout.html", bill=bill, customer=customer)
+
+        payment_method = request.form.get("payment_method", "COD")
+        shop_orders = build_shop_orders(bill["items"])
+        commission_total = money(sum(s["commission_amount"] for s in shop_orders))
+
+        order = {
+            "id": new_id("order"),
+            "customer": customer,
+            "items": bill["items"],
+            "shop_orders": shop_orders,
+            "payment_method": payment_method,
+            "payment_paid": payment_method == "COD" and False,
+            "cod_collected": False,
+            "delivery_partner_id": "",
+            "status": "Pending",
+            "subtotal": bill["subtotal"],
+            "delivery_fee": bill["delivery_fee"],
+            "platform_fee": bill["platform_fee"],
+            "total": bill["total"],
+            "commission_total": commission_total,
+            "upi_link": "",
+            "maps_link": create_maps_link(customer["address"]),
+            "whatsapp_text": "",
+            "created_at": now(),
+            "updated_at": now(),
+            "status_history": [{"status": "Pending", "time": now(), "by": "customer"}],
+        }
+        order["upi_link"] = create_upi_link(order["id"], order["total"])
+        order["whatsapp_text"] = create_whatsapp_text(order)
+
+        orders = get_orders()
+        orders.insert(0, order)
+        save_orders(orders)
+
+        products = get_products()
+        for item in bill["items"]:
+            for product in products:
+                if product["id"] == item["product_id"]:
+                    product["stock"] = max(0, int(product.get("stock", 0)) - int(item.get("qty", 1)))
+        save_products(products)
+
+        save_customer(customer)
+        session["cart"] = {}
+        session.modified = True
+
+        add_notification("admin", "New Order", f"New order received: {order['id']}", order_id=order["id"])
+        for shop_order in shop_orders:
+            add_notification("shop", "New Shop Order", f"New order for {shop_order['shop_name']}", shop_order["shop_id"], order["id"])
+
+        return redirect(url_for("order_confirmation", order_id=order["id"]))
+
+    return render_template("checkout.html", bill=bill, customer={})
+
+
+@app.route("/order/<order_id>")
+@app.route("/order/<order_id>/confirmation")
+def order_confirmation(order_id):
+    order = next((o for o in get_orders() if o.get("id") == order_id), None)
+    if not order:
+        return render_template("404.html"), 404
+    return render_template("bill.html", order=order)
+
+
+@app.route("/track", methods=["GET", "POST"])
+def track_order():
+    order = None
+    if request.method == "POST":
+        order_id = request.form.get("order_id", "").strip()
+        phone = request.form.get("phone", "").strip()
+        order = next(
+            (o for o in get_orders() if o.get("id") == order_id or o.get("customer", {}).get("phone") == phone),
+            None,
+        )
+    return render_template("track.html", order=order, statuses=ORDER_STATUSES)
 
 
 @app.route("/track/<order_id>")
-def track(order_id):
-    for order_data in orders:
-        if order_data["id"] == order_id:
-            steps = ["Pending", "Packed", "Out for Delivery", "Delivered"]
+def track_order_direct(order_id):
+    order = next((o for o in get_orders() if o.get("id") == order_id), None)
+    return render_template("track.html", order=order, statuses=ORDER_STATUSES)
 
-            body = f"""
-            <p><b>Order ID:</b> {order_data['id']}</p>
-            <h3>Total: ₹{order_data['total']}</h3>
-            <p><b>Delivery Boy:</b> {order_data.get('delivery_boy', 'Not Assigned')}</p>
-            """
 
-            if order_data["status"] in steps:
-                for step in steps:
-                    mark = "✅" if steps.index(step) <= steps.index(order_data["status"]) else "⬜"
-                    body += f"<p>{mark} {step}</p>"
-            else:
-                body += f"<p>Status: {order_data['status']}</p>"
+@app.route("/qr/<order_id>")
+def qr_code(order_id):
+    order = next((o for o in get_orders() if o.get("id") == order_id), None)
+    if not order:
+        return "Order not found", 404
 
-            body += "<a class='btn' href='/'>Home</a>"
-            return page("🚚 Order Tracking", body)
+    qr_data = order.get("upi_link") if request.args.get("type") == "upi" else url_for("order_confirmation", order_id=order_id, _external=True)
 
-    return page("Not Found", "<p>Order not found.</p><a class='btn' href='/'>Home</a>")
+    if not qrcode:
+        return jsonify({"qr_data": qr_data, "message": "Install qrcode package: pip install qrcode[pil]"})
+
+    img = qrcode.make(qr_data)
+    buffer = BytesIO()
+    img.save(buffer, "PNG")
+    buffer.seek(0)
+    return send_file(buffer, mimetype="image/png")
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    role = request.args.get("role", request.form.get("role", "admin"))
+
     if request.method == "POST":
-        username = request.form.get("username", "")
+        username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        if username == ADMIN_USER and password == ADMIN_PASS:
-            session["admin"] = True
-            return redirect("/admin")
-
-        return page("Login Failed", "<p>Wrong username or password.</p><a class='btn' href='/login'>Try Again</a>")
-
-    body = """
-    <form method="POST">
-        <input name="username" placeholder="Admin Username" required>
-        <input name="password" type="password" placeholder="Admin Password" required>
-        <button>Login</button>
-    </form>
-    <a class="btn" href="/">Home</a>
-    """
-
-    return page("Admin Login", body)
-
-
-@app.route("/admin")
-def admin():
-    if not session.get("admin"):
-        return redirect("/login")
-
-    today = time.strftime("%Y-%m-%d")
-    today_orders = [order for order in orders if order.get("created_at", "").startswith(today)]
-    today_revenue = sum(int(order.get("total", 0)) for order in today_orders)
-    pending = len([order for order in orders if order.get("status") not in ["Delivered", "Cancelled"]])
-    delivered = len([order for order in orders if order.get("status") == "Delivered"])
-    unpaid = len([order for order in orders if order.get("payment_status") == "Not Paid"])
-
-    body = f"""
-    <audio id="notifySound">
-        <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
-    </audio>
-
-    <button onclick="enableSound()">🔔 Enable Order Sound</button>
-
-    <script>
-        function enableSound() {{
-            localStorage.setItem("hm_admin_sound", "yes");
-            let test = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-            test.play().catch(function(){{}});
-            alert("Order sound enabled ✅");
-        }}
-
-        let oldCount = parseInt(localStorage.getItem("hm_admin_order_count") || "0");
-        let newCount = {len(orders)};
-
-        if (localStorage.getItem("hm_admin_sound") === "yes" && newCount > oldCount) {{
-            document.getElementById("notifySound").play().catch(function(){{}});
-        }}
-
-        localStorage.setItem("hm_admin_order_count", newCount);
-        setTimeout(function(){{ location.reload(); }}, 7000);
-    </script>
-
-    <a class="btn" href="/">Home</a>
-    <a class="btn" href="/admin-shops">Manage Shops</a>
-    <a class="btn" href="/admin-products">Manage Products</a>
-    <a class="btn" href="/admin-delivery">Delivery Partners</a>
-    <a class="btn" href="/delivery-login">Delivery Login</a>
-    <a class="btn btn-red" href="/logout">Logout</a>
-
-    <div class="stat-grid">
-        <div class="stat">Total<br>{len(orders)}</div>
-        <div class="stat">Today<br>{len(today_orders)}</div>
-        <div class="stat">Revenue<br>₹{today_revenue}</div>
-        <div class="stat">Pending<br>{pending}</div>
-        <div class="stat">Delivered<br>{delivered}</div>
-        <div class="stat">Unpaid<br>{unpaid}</div>
-    </div>
-    """
-
-    for index, order_data in enumerate(reversed(orders)):
-        real_index = len(orders) - 1 - index
-        is_new = index == 0 and order_data.get("status") == "Pending"
-
-        items = ", ".join([
-            f"{item.get('name')} x{item.get('qty')} ({item.get('shop')})"
-            for item in order_data["cart"]
-        ])
-
-        map_link = "https://www.google.com/maps/search/?api=1&query=" + quote(order_data["address"])
-        card_class = "card new-card" if is_new else "card"
-
-        body += f"""
-        <div class="{card_class}">
-            <b>Order:</b> {order_data['id']}<br>
-            <b>Name:</b> {order_data['name']}<br>
-            <b>Phone:</b> {order_data['phone']}<br>
-            <b>Address:</b> {order_data['address']}<br>
-            <b>Items:</b> {items}<br>
-            <b>Total:</b> ₹{order_data['total']}<br>
-            {status_badge(order_data['status'])}<br>
-            <b>Payment:</b> {order_data['payment_method']} - {order_data['payment_status']}<br>
-            <b>Delivery:</b> {order_data.get('delivery_boy', 'Not Assigned')}<br>
-            <b>COD:</b> {order_data.get('cod_collected', 'No')}<br>
-
-            <a class="btn" href="tel:{order_data['phone']}">Call Customer</a>
-            <a class="btn" href="{map_link}" target="_blank">Open Map</a>
-            <a class="btn" href="/bill/{order_data['id']}">View Bill</a>
-
-            <a href="/status/{real_index}/Packed">Packed</a> |
-            <a href="/status/{real_index}/Out for Delivery">Out</a> |
-            <a href="/status/{real_index}/Delivered">Delivered</a> |
-            <a href="/paid/{real_index}">Paid</a> |
-            <a href="/delete/{real_index}">Delete</a>
-
-            <br><br><b>Assign Delivery:</b><br>
-        """
-
-        for username, partner in delivery_partners.items():
-            body += f"<a href='/assign/{real_index}/{username}'>{partner.get('name', username)}</a> | "
-
-        body += "</div>"
-
-    return page("📊 Admin Dashboard", body)
-
-
-@app.route("/admin-shops", methods=["GET", "POST"])
-def admin_shops():
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if request.method == "POST":
-        old_name = request.form.get("old_name", "")
-        new_name = request.form.get("shop_name", "").strip()
-
-        if not new_name:
-            return page("Error", "<p>Shop name required.</p><a class='btn' href='/admin-shops'>Back</a>")
-
-        uploaded = upload_file(request.files.get("image"))
-
-        shop_data = {
-            "phone": request.form.get("phone", ""),
-            "category": request.form.get("category", "General"),
-            "image": uploaded if uploaded else shops.get(old_name, {}).get("image", ""),
-            "username": request.form.get("username", new_name.lower().replace(" ", "")),
-            "password": request.form.get("password", "1234")
-        }
-
-        if old_name and old_name in shops and old_name != new_name:
-            shops.pop(old_name)
-            products[new_name] = products.pop(old_name, [])
-        else:
-            products.setdefault(new_name, [])
-
-        shops[new_name] = shop_data
-        save_all()
-        return redirect("/admin-shops")
-
-    body = """
-    <form method="POST" enctype="multipart/form-data">
-        <input name="shop_name" placeholder="Shop Name" required>
-        <input name="phone" placeholder="Shop Phone" required>
-        <input name="category" placeholder="Category" required>
-        <input name="username" placeholder="Shop Username" required>
-        <input name="password" placeholder="Shop Password" required>
-        <input type="file" accept="image/*" capture="environment" name="image">
-        <button>Add Shop</button>
-    </form>
-    <a class="btn" href="/admin">Back Admin</a>
-    """
-
-    for shop_name, shop in shops.items():
-        body += f"""
-        <div class="card">
-            {image_html(shop.get('image'), 'No Shop Image')}
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="old_name" value="{shop_name}">
-                <input name="shop_name" value="{shop_name}">
-                <input name="phone" value="{shop.get('phone', '')}">
-                <input name="category" value="{shop.get('category', '')}">
-                <input name="username" value="{shop.get('username', '')}">
-                <input name="password" value="{shop.get('password', '')}">
-                <input type="file" accept="image/*" capture="environment" name="image">
-                <button>Update Shop</button>
-            </form>
-            <a href="/delete-shop/{quote(shop_name)}">Delete Shop</a>
-        </div>
-        """
-
-    return page("🏪 Manage Shops", body)
-
-
-@app.route("/delete-shop/<shop_name>")
-def delete_shop(shop_name):
-    if not session.get("admin"):
-        return redirect("/login")
-
-    shop_name = unquote(shop_name)
-
-    if shop_name in shops:
-        shops.pop(shop_name)
-        products.pop(shop_name, None)
-        save_all()
-
-    return redirect("/admin-shops")
-
-
-@app.route("/admin-products", methods=["GET", "POST"])
-def admin_products():
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if request.method == "POST":
-        shop = request.form.get("shop", "")
-        index = request.form.get("index", "")
-
-        uploaded = upload_file(request.files.get("image"))
-
-        product_data = {
-            "name": request.form.get("name", "").strip(),
-            "price": int(request.form.get("price", 0)),
-            "stock": int(request.form.get("stock", 0)),
-            "barcode": request.form.get("barcode", f"HM-{int(time.time())}"),
-            "category": request.form.get("category", "General"),
-            "image": uploaded,
-            "tag": request.form.get("tag", "")
-        }
-
-        products.setdefault(shop, [])
-
-        if index != "":
-            old_image = products[shop][int(index)].get("image", "")
-            if not uploaded:
-                product_data["image"] = old_image
-            products[shop][int(index)] = product_data
-        else:
-            products[shop].append(product_data)
-
-        save_all()
-        return redirect("/admin-products")
-
-    body = "<form method='POST' enctype='multipart/form-data'>"
-    body += "<select name='shop'>"
-
-    for shop_name in shops:
-        body += f"<option value='{shop_name}'>{shop_name}</option>"
-
-    body += """
-        </select>
-        <input name="name" placeholder="Product Name" required>
-        <input name="price" type="number" placeholder="Price" required>
-        <input name="stock" type="number" placeholder="Stock" required>
-        <input name="barcode" placeholder="Barcode / Product Code">
-        <input name="category" placeholder="Category">
-        <input name="tag" placeholder="Tag: Best Seller / 10% OFF">
-        <input type="file" accept="image/*" capture="environment" name="image">
-        <button>Add Product</button>
-    </form>
-    <a class="btn" href="/admin">Back Admin</a>
-    """
-
-    for shop_name, items in products.items():
-        body += f"<h3>{shop_name}</h3>"
-
-        for index, item in enumerate(items):
-            body += f"""
-            <div class="card">
-                {image_html(item.get('image'), 'No Product Image')}
-                <form method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="shop" value="{shop_name}">
-                    <input type="hidden" name="index" value="{index}">
-                    <input name="name" value="{item.get('name', '')}">
-                    <input name="price" type="number" value="{item.get('price', 0)}">
-                    <input name="stock" type="number" value="{item.get('stock', 0)}">
-                    <input name="barcode" value="{item.get('barcode', '')}">
-                    <input name="category" value="{item.get('category', '')}">
-                    <input name="tag" value="{item.get('tag', '')}">
-                    <input type="file" accept="image/*" capture="environment" name="image">
-                    <button>Update Product</button>
-                </form>
-                <a href="/delete-product/{quote(shop_name)}/{index}">Delete Product</a>
-            </div>
-            """
-
-    return page("🛒 Manage Products", body)
-
-
-@app.route("/delete-product/<shop_name>/<int:index>")
-def delete_product(shop_name, index):
-    if not session.get("admin"):
-        return redirect("/login")
-
-    shop_name = unquote(shop_name)
-
-    if shop_name in products and 0 <= index < len(products[shop_name]):
-        products[shop_name].pop(index)
-        save_all()
-
-    return redirect("/admin-products")
-
-
-@app.route("/shop-login", methods=["GET", "POST"])
-def shop_login():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-
-        for shop_name, shop in shops.items():
-            if shop.get("username") == username and shop.get("password") == password:
-                session["shop"] = shop_name
-                return redirect("/shop-dashboard")
-
-        return page("Wrong Login", "<p>Wrong shop username/password.</p><a class='btn' href='/shop-login'>Try Again</a>")
-
-    body = """
-    <form method="POST">
-        <input name="username" placeholder="Shop Username" required>
-        <input name="password" type="password" placeholder="Shop Password" required>
-        <button>Login</button>
-    </form>
-    <a class="btn" href="/">Home</a>
-    """
-
-    return page("Shop Login", body)
-
-
-@app.route("/shop-dashboard", methods=["GET", "POST"])
-def shop_dashboard():
-    shop_name = session.get("shop")
-
-    if not shop_name:
-        return redirect("/shop-login")
-
-    if request.method == "POST":
-        index = int(request.form.get("index", 0))
-        products[shop_name][index]["stock"] = int(request.form.get("stock", 0))
-        save_all()
-        return redirect("/shop-dashboard")
-
-    shop_orders = []
-    for order_index, order_data in enumerate(orders):
-        shop_items = [
-            item for item in order_data.get("cart", [])
-            if item.get("shop") == shop_name
-        ]
-
-        if shop_items:
-            shop_orders.append((order_index, order_data, shop_items))
-
-    today_sales = sum(order.get("total", 0) for _, order, _ in shop_orders if order.get("status") == "Delivered")
-    pending_count = len([order for _, order, _ in shop_orders if order.get("status") != "Delivered"])
-
-    shop_key = shop_name.replace(" ", "_").replace("'", "")
-
-    body = f"""
-    <audio id="notifySound">
-        <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
-    </audio>
-
-    <button onclick="enableShopSound()">🔔 Enable Shop Sound</button>
-
-    <script>
-        function enableShopSound() {{
-            localStorage.setItem("hm_shop_sound_{shop_key}", "yes");
-            let test = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-            test.play().catch(function(){{}});
-            alert("Shop order sound enabled ✅");
-        }}
-
-        let oldCount = parseInt(localStorage.getItem("hm_shop_{shop_key}_count") || "0");
-        let newCount = {len(shop_orders)};
-
-        if (localStorage.getItem("hm_shop_sound_{shop_key}") === "yes" && newCount > oldCount) {{
-            document.getElementById("notifySound").play().catch(function(){{}});
-        }}
-
-        localStorage.setItem("hm_shop_{shop_key}_count", newCount);
-        setTimeout(function(){{ location.reload(); }}, 7000);
-    </script>
-
-    <h3>{shop_name}</h3>
-    <a class="btn" href="/">Home</a>
-    <a class="btn btn-red" href="/shop-logout">Logout</a>
-
-    <div class="stat-grid">
-        <div class="stat">Orders<br>{len(shop_orders)}</div>
-        <div class="stat">Pending<br>{pending_count}</div>
-        <div class="stat">Sales<br>₹{today_sales}</div>
-        <div class="stat">Products<br>{len(products.get(shop_name, []))}</div>
-    </div>
-    """
-
-    body += "<h3>Your Orders</h3>"
-
-    for order_index, order_data, shop_items in shop_orders:
-        items_text = ", ".join([f"{item.get('name')} x{item.get('qty')}" for item in shop_items])
-
-        body += f"""
-        <div class="card">
-            <b>Order:</b> {order_data['id']}<br>
-            <b>Name:</b> {order_data['name']}<br>
-            <b>Phone:</b> {order_data['phone']}<br>
-            <b>Address:</b> {order_data['address']}<br>
-            <b>Items:</b> {items_text}<br>
-            {status_badge(order_data['status'])}<br>
-
-            <a class="btn" href="tel:{order_data['phone']}">Call Customer</a>
-            <a href="/shop-status/{order_index}/Packed">Packed</a> |
-            <a href="/shop-status/{order_index}/Out for Delivery">Out</a> |
-            <a href="/shop-status/{order_index}/Delivered">Delivered</a>
-        </div>
-        """
-
-    body += "<h3>Manage Stock</h3>"
-
-    for index, item in enumerate(products.get(shop_name, [])):
-        body += f"""
-        <div class="card">
-            {image_html(item.get('image'), 'No Product Image')}
-            <b>{item.get('name')}</b><br>
-            ₹{item.get('price')}<br>
-            Stock: {item.get('stock')}<br>
-            <form method="POST">
-                <input type="hidden" name="index" value="{index}">
-                <input type="number" name="stock" placeholder="New Stock" required>
-                <button>Update Stock</button>
-            </form>
-        </div>
-        """
-
-    return page("🏪 Shop Dashboard", body)
-
-
-@app.route("/shop-status/<int:index>/<status_value>")
-def shop_status(index, status_value):
-    if not session.get("shop"):
-        return redirect("/shop-login")
-
-    if 0 <= index < len(orders):
-        orders[index]["status"] = status_value
-        save_all()
-
-    return redirect("/shop-dashboard")
-
-
-@app.route("/shop-logout")
-def shop_logout():
-    session.pop("shop", None)
-    return redirect("/")
-
-
-@app.route("/customer-login", methods=["GET", "POST"])
-def customer_login():
-    if request.method == "POST":
-        phone = request.form.get("phone", "").strip()
-
-        customers[phone] = {
-            "name": request.form.get("name", ""),
-            "phone": phone,
-            "address": request.form.get("address", "")
-        }
-
-        session["customer_phone"] = phone
-        save_all()
-        return redirect("/customer-dashboard")
-
-    body = """
-    <form method="POST">
-        <input name="name" placeholder="Name" required>
-        <input name="phone" placeholder="Phone" required>
-        <input name="address" placeholder="Address" required>
-        <button>Save & Login</button>
-    </form>
-    <a class="btn" href="/">Home</a>
-    """
-
-    return page("Customer Login", body)
-
-
-@app.route("/customer-dashboard")
-def customer_dashboard():
-    phone = session.get("customer_phone")
-
-    if not phone:
-        return redirect("/customer-login")
-
-    customer = customers.get(phone, {})
-    body = f"""
-    <h3>{customer.get('name', '')}</h3>
-    <p>{customer.get('phone', '')}</p>
-    <p>{customer.get('address', '')}</p>
-    <a class="btn" href="/">Order Now</a>
-    <a class="btn btn-red" href="/customer-logout">Logout</a>
-    """
-
-    for order_data in orders:
-        if order_data.get("phone") == phone:
-            body += f"""
-            <div class="card">
-                <b>Order:</b> {order_data['id']}<br>
-                <b>Total:</b> ₹{order_data['total']}<br>
-                {status_badge(order_data['status'])}<br>
-                <a href="/bill/{order_data['id']}">Bill</a> |
-                <a href="/track/{order_data['id']}">Track</a>
-            </div>
-            """
-
-    return page("👤 Customer Dashboard", body)
-
-
-@app.route("/customer-logout")
-def customer_logout():
-    session.pop("customer_phone", None)
-    return redirect("/")
-
-
-@app.route("/admin-delivery", methods=["GET", "POST"])
-def admin_delivery():
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-
-        if username:
-            delivery_partners[username] = {
-                "name": request.form.get("name", username.title()),
-                "password": request.form.get("password", "1234"),
-                "phone": request.form.get("phone", "")
-            }
-            save_all()
-
-        return redirect("/admin-delivery")
-
-    body = """
-    <form method="POST">
-        <input name="name" placeholder="Delivery Partner Name" required>
-        <input name="username" placeholder="Username" required>
-        <input name="password" placeholder="Password" required>
-        <input name="phone" placeholder="Phone">
-        <button>Add Delivery Partner</button>
-    </form>
-    <a class="btn" href="/admin">Back Admin</a>
-    """
-
-    for username, partner in delivery_partners.items():
-        body += f"""
-        <div class="card">
-            <b>{partner.get('name')}</b><br>
-            Username: {username}<br>
-            Password: {partner.get('password')}<br>
-            Phone: {partner.get('phone', '')}<br>
-            <a href="/delete-delivery/{username}">Delete</a>
-        </div>
-        """
-
-    return page("🛵 Delivery Partners", body)
-
-
-@app.route("/delete-delivery/<username>")
-def delete_delivery(username):
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if username in delivery_partners:
-        delivery_partners.pop(username)
-        save_all()
-
-    return redirect("/admin-delivery")
-
-
-@app.route("/delivery-login", methods=["GET", "POST"])
-def delivery_login():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-
-        if username in delivery_partners and delivery_partners[username].get("password") == password:
-            session["delivery_boy"] = username
-            return redirect("/delivery-dashboard")
-
-        return page("Wrong Login", "<p>Wrong delivery login.</p><a class='btn' href='/delivery-login'>Try Again</a>")
-
-    body = """
-    <form method="POST">
-        <input name="username" placeholder="Delivery Username" required>
-        <input name="password" type="password" placeholder="Password" required>
-        <button>Login</button>
-    </form>
-    <a class="btn" href="/">Home</a>
-    """
-
-    return page("Delivery Login", body)
-
-
-@app.route("/delivery-dashboard")
-def delivery_dashboard():
-    username = session.get("delivery_boy")
-
-    if not username:
-        return redirect("/delivery-login")
-
-    partner = delivery_partners.get(username, {})
-    body = f"""
-    <h3>Welcome {partner.get('name', username)}</h3>
-    <a class="btn btn-red" href="/delivery-logout">Logout</a>
-    """
-
-    for index, order_data in enumerate(orders):
-        if order_data.get("delivery_boy") == username:
-            map_link = "https://www.google.com/maps/search/?api=1&query=" + quote(order_data["address"])
-
-            body += f"""
-            <div class="card">
-                <b>Order:</b> {order_data['id']}<br>
-                <b>Name:</b> {order_data['name']}<br>
-                <b>Phone:</b> {order_data['phone']}<br>
-                <b>Address:</b> {order_data['address']}<br>
-                <b>Total:</b> ₹{order_data['total']}<br>
-                {status_badge(order_data['status'])}<br>
-                <b>COD:</b> {order_data.get('cod_collected', 'No')}<br>
-
-                <a class="btn" href="tel:{order_data['phone']}">Call Customer</a>
-                <a class="btn" href="{map_link}" target="_blank">Open Map</a>
-                <a href="/delivery-status/{index}/Out for Delivery">Out for Delivery</a> |
-                <a href="/delivery-status/{index}/Delivered">Delivered</a> |
-                <a href="/cod-collected/{index}">COD Collected</a>
-            </div>
-            """
-
-    return page("🛵 Delivery Dashboard", body)
-
-
-@app.route("/delivery-status/<int:index>/<status_value>")
-def delivery_status(index, status_value):
-    if not session.get("delivery_boy"):
-        return redirect("/delivery-login")
-
-    if 0 <= index < len(orders):
-        orders[index]["status"] = status_value
-        save_all()
-
-    return redirect("/delivery-dashboard")
-
-
-@app.route("/cod-collected/<int:index>")
-def cod_collected(index):
-    if not session.get("delivery_boy"):
-        return redirect("/delivery-login")
-
-    if 0 <= index < len(orders):
-        orders[index]["cod_collected"] = "Yes"
-        orders[index]["payment_status"] = "Paid"
-        save_all()
-
-    return redirect("/delivery-dashboard")
-
-
-@app.route("/delivery-logout")
-def delivery_logout():
-    session.pop("delivery_boy", None)
-    return redirect("/")
-
-
-@app.route("/assign/<int:index>/<delivery_username>")
-def assign(index, delivery_username):
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if 0 <= index < len(orders):
-        orders[index]["delivery_boy"] = delivery_username
-        save_all()
-
-    return redirect("/admin")
-
-
-@app.route("/status/<int:index>/<status_value>")
-def status(index, status_value):
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if 0 <= index < len(orders):
-        orders[index]["status"] = status_value
-        save_all()
-
-    return redirect("/admin")
-
-
-@app.route("/paid/<int:index>")
-def paid(index):
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if 0 <= index < len(orders):
-        orders[index]["payment_status"] = "Paid"
-        save_all()
-
-    return redirect("/admin")
-
-
-@app.route("/delete/<int:index>")
-def delete(index):
-    if not session.get("admin"):
-        return redirect("/login")
-
-    if 0 <= index < len(orders):
-        orders.pop(index)
-        save_all()
-
-    return redirect("/admin")
+        if role == "admin":
+            settings = get_settings()
+            if username == settings.get("admin_username") and check_password_hash(settings.get("admin_password_hash"), password):
+                session["role"] = "admin"
+                session["user_id"] = "admin"
+                return redirect(url_for("admin_dashboard"))
+
+        elif role == "shop":
+            shop = next((s for s in get_shops() if s.get("username") == username), None)
+            if shop and check_password_hash(shop.get("password_hash"), password):
+                session["role"] = "shop"
+                session["user_id"] = shop["id"]
+                return redirect(url_for("shop_dashboard"))
+
+        elif role == "delivery":
+            partner = next((p for p in get_delivery_partners() if p.get("username") == username), None)
+            if partner and check_password_hash(partner.get("password_hash"), password):
+                session["role"] = "delivery"
+                session["user_id"] = partner["id"]
+                return redirect(url_for("delivery_dashboard"))
+
+        flash("Invalid username or password.")
+
+    return render_template("login.html", role=role)
 
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/")
+    return redirect(url_for("index"))
 
+
+@app.route("/admin")
+@login_required("admin")
+def admin_dashboard():
+    orders = get_orders()
+    shops = get_shops()
+    completed = [o for o in orders if o.get("status") == "Completed"]
+
+    stats = {
+        "total_orders": len(orders),
+        "pending": len([o for o in orders if o.get("status") == "Pending"]),
+        "completed": len(completed),
+        "revenue": money(sum(o.get("total", 0) for o in completed)),
+        "commission_earned": money(sum(o.get("commission_total", 0) for o in completed)),
+        "active_shops": len([s for s in shops if s.get("active", True)]),
+    }
+
+    partners = get_delivery_partners()
+    return render_template("admin.html", orders=orders, shops=shops, stats=stats, partners=partners, statuses=ORDER_STATUSES)
+
+
+@app.route("/admin/order/<order_id>/status", methods=["POST"])
+@login_required("admin")
+def admin_update_order_status(order_id):
+    status = request.form.get("status")
+    orders = get_orders()
+
+    for order in orders:
+        if order.get("id") == order_id:
+            if status in ORDER_STATUSES:
+                order["status"] = status
+                order["updated_at"] = now()
+                order.setdefault("status_history", []).append({"status": status, "time": now(), "by": "admin"})
+                for shop_order in order.get("shop_orders", []):
+                    shop_order["status"] = status
+                add_notification("shop", "Order Status Updated", f"Order {order_id} is now {status}", order_id=order_id)
+                add_notification("delivery", "Order Status Updated", f"Order {order_id} is now {status}", order.get("delivery_partner_id", ""), order_id)
+            break
+
+    save_orders(orders)
+    return redirect(request.referrer or url_for("admin_dashboard"))
+
+
+@app.route("/admin/order/<order_id>/assign", methods=["POST"])
+@login_required("admin")
+def admin_assign_delivery(order_id):
+    delivery_partner_id = request.form.get("delivery_partner_id", "")
+    orders = get_orders()
+
+    for order in orders:
+        if order.get("id") == order_id:
+            order["delivery_partner_id"] = delivery_partner_id
+            order["updated_at"] = now()
+            add_notification("delivery", "New Delivery Assigned", f"Order {order_id} assigned to you", delivery_partner_id, order_id)
+            break
+
+    save_orders(orders)
+    return redirect(request.referrer or url_for("admin_dashboard"))
+
+
+@app.route("/admin/order/<order_id>/payment", methods=["POST"])
+@login_required("admin")
+def admin_update_payment(order_id):
+    orders = get_orders()
+    payment_paid = request.form.get("payment_paid") == "on"
+    cod_collected = request.form.get("cod_collected") == "on"
+
+    for order in orders:
+        if order.get("id") == order_id:
+            order["payment_paid"] = payment_paid
+            order["cod_collected"] = cod_collected
+            order["updated_at"] = now()
+            break
+
+    save_orders(orders)
+    return redirect(request.referrer or url_for("admin_dashboard"))
+
+
+@app.route("/admin/order/<order_id>/delete", methods=["POST", "GET"])
+@login_required("admin")
+def admin_delete_order(order_id):
+    orders = [o for o in get_orders() if o.get("id") != order_id]
+    save_orders(orders)
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/settings", methods=["GET", "POST"])
+@login_required("admin")
+def admin_settings():
+    settings = get_settings()
+
+    if request.method == "POST":
+        settings["admin_username"] = request.form.get("admin_username", settings["admin_username"])
+        new_password = request.form.get("admin_password", "").strip()
+        if new_password:
+            settings["admin_password_hash"] = generate_password_hash(new_password)
+        settings["delivery_fee"] = money(request.form.get("delivery_fee", settings["delivery_fee"]))
+        settings["platform_fee"] = money(request.form.get("platform_fee", settings["platform_fee"]))
+        settings["upi_id"] = request.form.get("upi_id", settings["upi_id"])
+        settings["upi_name"] = request.form.get("upi_name", settings["upi_name"])
+        settings["support_phone"] = request.form.get("support_phone", settings["support_phone"])
+        write_json(SETTINGS_FILE, settings)
+        flash("Settings updated.")
+
+    return render_template("admin_settings.html", settings=settings)
+
+
+@app.route("/admin/shop/add", methods=["POST"])
+@login_required("admin")
+def admin_add_shop():
+    shops = get_shops()
+    shop = {
+        "id": new_id("shop"),
+        "name": request.form.get("name", "New Shop"),
+        "username": request.form.get("username", new_id("shopuser")),
+        "password_hash": generate_password_hash(request.form.get("password", "shop123")),
+        "phone": request.form.get("phone", ""),
+        "address": request.form.get("address", ""),
+        "category": request.form.get("category", "Local Shop"),
+        "plan": request.form.get("plan", "Free"),
+        "verified": request.form.get("verified") == "on",
+        "featured": request.form.get("featured") == "on",
+        "rating": money(request.form.get("rating", 4.0)),
+        "delivery_time": request.form.get("delivery_time", "30-45 min"),
+        "active": True,
+        "created_at": now(),
+    }
+    shops.append(shop)
+    save_shops(shops)
+    return redirect(request.referrer or url_for("admin_dashboard"))
+
+
+@app.route("/admin/shop/<shop_id>/update", methods=["POST"])
+@login_required("admin")
+def admin_update_shop(shop_id):
+    shops = get_shops()
+    for shop in shops:
+        if shop.get("id") == shop_id:
+            shop["name"] = request.form.get("name", shop["name"])
+            shop["phone"] = request.form.get("phone", shop["phone"])
+            shop["address"] = request.form.get("address", shop["address"])
+            shop["category"] = request.form.get("category", shop["category"])
+            shop["plan"] = request.form.get("plan", shop["plan"])
+            shop["verified"] = request.form.get("verified") == "on"
+            shop["featured"] = request.form.get("featured") == "on"
+            shop["rating"] = money(request.form.get("rating", shop["rating"]))
+            shop["delivery_time"] = request.form.get("delivery_time", shop["delivery_time"])
+            shop["active"] = request.form.get("active") == "on"
+            new_password = request.form.get("password", "").strip()
+            if new_password:
+                shop["password_hash"] = generate_password_hash(new_password)
+            break
+    save_shops(shops)
+    return redirect(request.referrer or url_for("admin_dashboard"))
+
+
+@app.route("/shop-dashboard")
+@login_required("shop")
+def shop_dashboard():
+    shop_id = session.get("user_id")
+    shop = find_shop(shop_id)
+    products = [p for p in get_products() if p.get("shop_id") == shop_id]
+    orders = []
+
+    for order in get_orders():
+        relevant = [s for s in order.get("shop_orders", []) if s.get("shop_id") == shop_id]
+        if relevant:
+            copy = dict(order)
+            copy["shop_order"] = relevant[0]
+            orders.append(copy)
+
+    completed = [o for o in orders if o.get("status") == "Completed"]
+    stats = {
+        "orders": len(orders),
+        "products": len(products),
+        "revenue": money(sum(o.get("shop_order", {}).get("subtotal", 0) for o in completed)),
+        "commission": money(sum(o.get("shop_order", {}).get("commission_amount", 0) for o in completed)),
+        "earnings": money(sum(o.get("shop_order", {}).get("vendor_earning", 0) for o in completed)),
+    }
+
+    return render_template("shop_dashboard.html", shop=shop, products=products, orders=orders, stats=stats, statuses=ORDER_STATUSES)
+
+
+@app.route("/shop/order/<order_id>/status", methods=["POST"])
+@login_required("shop")
+def shop_update_order_status(order_id):
+    shop_id = session.get("user_id")
+    status = request.form.get("status")
+    orders = get_orders()
+
+    for order in orders:
+        if order.get("id") == order_id:
+            for shop_order in order.get("shop_orders", []):
+                if shop_order.get("shop_id") == shop_id and status in ORDER_STATUSES:
+                    shop_order["status"] = status
+                    order["updated_at"] = now()
+                    order.setdefault("status_history", []).append({"status": status, "time": now(), "by": "shop"})
+                    if all(s.get("status") == status for s in order.get("shop_orders", [])):
+                        order["status"] = status
+                    add_notification("admin", "Shop Updated Order", f"Order {order_id} updated to {status}", order_id=order_id)
+            break
+
+    save_orders(orders)
+    return redirect(request.referrer or url_for("shop_dashboard"))
+
+
+@app.route("/shop/product/add", methods=["POST"])
+@login_required("shop")
+def shop_add_product():
+    products = get_products()
+    tags_raw = request.form.get("tags", "")
+    product = {
+        "id": new_id("prod"),
+        "shop_id": session.get("user_id"),
+        "name": request.form.get("name", "New Product"),
+        "category": request.form.get("category", "General"),
+        "price": money(request.form.get("price", 0)),
+        "mrp": money(request.form.get("mrp", 0)),
+        "stock": int(request.form.get("stock", 0) or 0),
+        "offer": request.form.get("offer", ""),
+        "tags": [t.strip() for t in tags_raw.split(",") if t.strip()],
+        "description": request.form.get("description", ""),
+        "active": request.form.get("active", "on") == "on",
+        "created_at": now(),
+    }
+    products.append(product)
+    save_products(products)
+    return redirect(url_for("shop_dashboard"))
+
+
+@app.route("/shop/product/<product_id>/edit", methods=["POST"])
+@login_required("shop")
+def shop_edit_product(product_id):
+    products = get_products()
+    shop_id = session.get("user_id")
+
+    for product in products:
+        if product.get("id") == product_id and product.get("shop_id") == shop_id:
+            product["name"] = request.form.get("name", product["name"])
+            product["category"] = request.form.get("category", product["category"])
+            product["price"] = money(request.form.get("price", product["price"]))
+            product["mrp"] = money(request.form.get("mrp", product["mrp"]))
+            product["stock"] = int(request.form.get("stock", product["stock"]) or 0)
+            product["offer"] = request.form.get("offer", product["offer"])
+            product["tags"] = [t.strip() for t in request.form.get("tags", "").split(",") if t.strip()]
+            product["description"] = request.form.get("description", product["description"])
+            product["active"] = request.form.get("active") == "on"
+            break
+
+    save_products(products)
+    return redirect(url_for("shop_dashboard"))
+
+
+@app.route("/shop/product/<product_id>/delete", methods=["POST", "GET"])
+@login_required("shop")
+def shop_delete_product(product_id):
+    shop_id = session.get("user_id")
+    products = [p for p in get_products() if not (p.get("id") == product_id and p.get("shop_id") == shop_id)]
+    save_products(products)
+    return redirect(url_for("shop_dashboard"))
+
+
+@app.route("/delivery-dashboard")
+@login_required("delivery")
+def delivery_dashboard():
+    partner_id = session.get("user_id")
+    partner = find_delivery_partner(partner_id)
+    orders = [o for o in get_orders() if o.get("delivery_partner_id") == partner_id]
+    return render_template("delivery_dashboard.html", partner=partner, orders=orders, statuses=ORDER_STATUSES)
+
+
+@app.route("/delivery/order/<order_id>/status", methods=["POST"])
+@login_required("delivery")
+def delivery_update_status(order_id):
+    partner_id = session.get("user_id")
+    status = request.form.get("status")
+    cod_collected = request.form.get("cod_collected") == "on"
+    orders = get_orders()
+
+    for order in orders:
+        if order.get("id") == order_id and order.get("delivery_partner_id") == partner_id:
+            if status in ORDER_STATUSES:
+                order["status"] = status
+                order["updated_at"] = now()
+                order.setdefault("status_history", []).append({"status": status, "time": now(), "by": "delivery"})
+            if cod_collected:
+                order["cod_collected"] = True
+                if order.get("payment_method") == "COD":
+                    order["payment_paid"] = True
+            add_notification("admin", "Delivery Updated", f"Order {order_id} updated by delivery partner", order_id=order_id)
+            break
+
+    save_orders(orders)
+    return redirect(request.referrer or url_for("delivery_dashboard"))
+
+
+@app.route("/api/search")
+def api_search():
+    q = request.args.get("q", "").strip().lower()
+    products = []
+    shops = []
+
+    if q:
+        for p in get_products():
+            shop = find_shop(p.get("shop_id"))
+            if not shop or not p.get("active", True):
+                continue
+            haystack = " ".join([
+                p.get("name", ""),
+                p.get("category", ""),
+                p.get("description", ""),
+                " ".join(p.get("tags", [])),
+                shop.get("name", ""),
+            ]).lower()
+            if q in haystack:
+                products.append({**p, "shop_name": shop.get("name"), "shop": shop})
+
+        for s in get_shops():
+            haystack = " ".join([s.get("name", ""), s.get("category", ""), s.get("address", "")]).lower()
+            if q in haystack and s.get("active", True):
+                shops.append(s)
+
+    products = sorted(products, key=lambda p: p.get("name", "").lower())
+    shops = sorted(shops, key=lambda s: (not s.get("featured", False), s.get("name", "").lower()))
+    return jsonify({"success": True, "query": q, "products": products, "shops": shops})
+
+
+@app.route("/api/cart")
+def api_cart():
+    return jsonify({"success": True, "cart": current_cart(), "bill": calculate_cart_bill(current_cart()), "count": cart_count()})
+
+
+@app.route("/api/cart/add", methods=["POST"])
+def api_cart_add():
+    data = request.get_json(silent=True) or request.form
+    product_id = data.get("product_id")
+    qty = int(data.get("qty", 1) or 1)
+    product = find_product(product_id)
+    if not product:
+        return jsonify({"success": False, "message": "Product not found"}), 404
+
+    cart = current_cart()
+    cart[product_id] = {"product_id": product_id, "qty": int(cart.get(product_id, {}).get("qty", 0)) + qty}
+    session["cart"] = cart
+    session.modified = True
+    return jsonify({"success": True, "count": cart_count(), "bill": calculate_cart_bill(cart)})
+
+
+@app.route("/api/notifications")
+def api_notifications():
+    role = request.args.get("role", session.get("role", "admin"))
+    target_id = request.args.get("target_id", session.get("user_id", ""))
+    unread_only = request.args.get("unread") == "1"
+
+    notifications = get_notifications()
+    filtered = []
+    for n in notifications:
+        if n.get("role") != role:
+            continue
+        if n.get("target_id") and target_id and n.get("target_id") != target_id:
+            continue
+        if unread_only and n.get("read"):
+            continue
+        filtered.append(n)
+
+    return jsonify({
+        "success": True,
+        "notifications": list(reversed(filtered[-50:])),
+        "unread_count": len([n for n in filtered if not n.get("read")]),
+        "play_sound": any(not n.get("read") for n in filtered),
+    })
+
+
+@app.route("/api/notifications/read", methods=["POST"])
+def api_notifications_read():
+    role = request.form.get("role", session.get("role", "admin"))
+    target_id = request.form.get("target_id", session.get("user_id", ""))
+    notifications = get_notifications()
+
+    for n in notifications:
+        if n.get("role") == role:
+            if not n.get("target_id") or not target_id or n.get("target_id") == target_id:
+                n["read"] = True
+
+    save_notifications(notifications)
+    return jsonify({"success": True})
+
+
+@app.route("/api/orders/<order_id>")
+def api_order(order_id):
+    order = next((o for o in get_orders() if o.get("id") == order_id), None)
+    if not order:
+        return jsonify({"success": False, "message": "Order not found"}), 404
+    return jsonify({"success": True, "order": order})
+
+
+@app.route("/api/admin/stats")
+@login_required("admin")
+def api_admin_stats():
+    orders = get_orders()
+    shops = get_shops()
+    completed = [o for o in orders if o.get("status") == "Completed"]
+    return jsonify({
+        "success": True,
+        "stats": {
+            "total_orders": len(orders),
+            "pending": len([o for o in orders if o.get("status") == "Pending"]),
+            "accepted": len([o for o in orders if o.get("status") == "Accepted"]),
+            "preparing": len([o for o in orders if o.get("status") == "Preparing"]),
+            "out_for_delivery": len([o for o in orders if o.get("status") == "Out for Delivery"]),
+            "completed": len(completed),
+            "cancelled": len([o for o in orders if o.get("status") == "Cancelled"]),
+            "revenue": money(sum(o.get("total", 0) for o in completed)),
+            "commission_earned": money(sum(o.get("commission_total", 0) for o in completed)),
+            "active_shops": len([s for s in shops if s.get("active", True)]),
+        }
+    })
+
+
+@app.route("/api/products")
+def api_products():
+    shop_id = request.args.get("shop_id")
+    products = get_products()
+    if shop_id:
+        products = [p for p in products if p.get("shop_id") == shop_id]
+    products = sorted(products, key=lambda p: p.get("name", "").lower())
+    return jsonify({"success": True, "products": products})
+
+
+@app.route("/api/shops")
+def api_shops():
+    shops = sorted(get_shops(), key=lambda s: (not s.get("featured", False), s.get("name", "").lower()))
+    return jsonify({"success": True, "shops": shops})
+
+
+@app.route("/api/commission-plans")
+def api_commission_plans():
+    return jsonify({"success": True, "plans": COMMISSION_PLANS})
+
+
+@app.errorhandler(404)
+def not_found(e):
+    try:
+        return render_template("404.html"), 404
+    except Exception:
+        return "404 Not Found", 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return "Internal Server Error. Check terminal logs.", 500
+
+
+def initialize_files():
+    read_json(SETTINGS_FILE, DEFAULT_SETTINGS)
+    read_json(SHOPS_FILE, DEFAULT_SHOPS)
+    read_json(PRODUCTS_FILE, DEFAULT_PRODUCTS)
+    read_json(ORDERS_FILE, [])
+    read_json(CUSTOMERS_FILE, [])
+    read_json(DELIVERY_FILE, DEFAULT_DELIVERY)
+    read_json(NOTIFICATIONS_FILE, [])
+
+
+initialize_files()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True, host="0.0.0.0", port=5000)
