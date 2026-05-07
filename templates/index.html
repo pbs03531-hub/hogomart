@@ -1,530 +1,769 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HogoMart | Local Ordering App</title>
+    <title>HogoMart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box;font-family:Inter,Arial,system-ui}
-    body{background:#f6f7fb;color:#111;padding-bottom:170px}
-    a{text-decoration:none;color:inherit}
-    button,input,select{font-family:inherit}
-    .app{max-width:1200px;margin:auto}
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-    .topbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
-    .brand{display:flex;align-items:center;gap:10px}
-    .brand img{width:42px;height:42px;border-radius:12px;object-fit:contain}
-    .brand h1{font-size:21px;font-weight:950}
-    .brand p{font-size:11px;color:#666;font-weight:700}
-    .login-links{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-    .login-links a{font-size:11px;padding:8px 10px;background:#111;color:#fff;border-radius:999px;font-weight:850}
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f4f7;
+            color: #111;
+        }
 
-    .hero{margin:16px;border-radius:30px;padding:28px 18px;background:linear-gradient(135deg,#ff6b00,#ff2e63 55%,#6c2cff);color:white;box-shadow:0 18px 45px rgba(255,90,0,.25)}
-    .hero h2{font-size:31px;line-height:1.05;letter-spacing:-1px;margin-bottom:10px}
-    .hero p{font-size:15px;margin-bottom:18px;font-weight:650;opacity:.96}
-    .search-wrap{background:#fff;border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:8px;box-shadow:0 12px 35px rgba(0,0,0,.14)}
-    .search-wrap input{flex:1;border:none;outline:none;font-size:15px;font-weight:750;padding:10px;color:#222}
+        .app {
+            max-width: 430px;
+            margin: auto;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 14px;
+            padding-bottom: 150px;
+        }
 
-    .section{padding:6px 16px 18px}
-    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .section h3{font-size:21px;font-weight:950}
-    .section small{color:#777;font-weight:800}
+        .logo {
+            width: 100%;
+            border-radius: 22px;
+            margin-bottom: 12px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
 
-    .chips{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
-    .chip{border:0;padding:11px 15px;border-radius:999px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.07);font-weight:900;white-space:nowrap}
-    .chip.active{background:#111;color:white}
+        .hero {
+            background: linear-gradient(135deg, #0f8a3b, #22c064);
+            color: white;
+            padding: 18px;
+            border-radius: 24px;
+            margin-bottom: 14px;
+            box-shadow: 0 8px 20px rgba(15,138,59,0.25);
+        }
 
-    .shop-row,.products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:14px}
-    .shop-card,.product-card{background:white;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.075);overflow:hidden;border:1px solid rgba(0,0,0,.04)}
-    .shop-card{padding:16px}
-    .shop-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .shop-icon{width:48px;height:48px;border-radius:17px;background:#fff1e6;display:grid;place-items:center;font-size:23px}
-    .shop-card h4{font-size:16px;font-weight:950;margin-bottom:5px}
-    .shop-card p{font-size:13px;color:#666;font-weight:650;line-height:1.4}
+        .hero h1 {
+            margin: 0;
+            font-size: 27px;
+        }
 
-    .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-    .badge{font-size:10px;font-weight:950;padding:5px 8px;border-radius:999px;background:#f1f1f1;color:#333}
-    .green{background:#e8fff1;color:#079444}
-    .orange{background:#fff1e6;color:#ff6200}
-    .purple{background:#f0e9ff;color:#6c2cff}
-    .red{background:#ffe9e9;color:#d10000}
+        .hero p {
+            margin: 8px 0 0;
+            font-size: 14px;
+            opacity: 0.95;
+        }
 
-    .filters{background:white;margin:0 16px 16px;padding:14px;border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.07);display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-    .filters select{width:100%;border:1px solid #eee;background:#fafafa;border-radius:14px;padding:12px;outline:none;font-weight:850;color:#333}
+        .nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 12px 0;
+        }
 
-    .product-img{height:150px;background:linear-gradient(135deg,#f3f3f3,#fff);display:grid;place-items:center;color:#999;font-weight:950}
-    .product-img img{width:100%;height:100%;object-fit:cover}
-    .product-body{padding:14px;display:flex;flex-direction:column;gap:8px}
-    .product-title{font-size:16px;font-weight:950}
-    .shop-name{font-size:12px;color:#777;font-weight:750}
-    .price-line{display:flex;justify-content:space-between;align-items:center}
-    .price{font-size:19px;font-weight:950}
-    .stock{font-size:11px;font-weight:950;padding:5px 8px;background:#f6f6f6;border-radius:999px;color:#555}
-    .stock.out{background:#ffe9e9;color:#d10000}
+        .nav a {
+            background: #eaf8ef;
+            color: #0f8a3b;
+            text-decoration: none;
+            text-align: center;
+            padding: 10px 6px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: bold;
+        }
 
-    .product-actions{display:flex;align-items:center;gap:9px;margin-top:auto}
-    .qty-control{display:flex;align-items:center;gap:8px;background:#f5f5f5;border-radius:999px;padding:6px}
-    .qty-control button{width:30px;height:30px;border:0;border-radius:50%;background:white;font-size:18px;font-weight:950}
-    .qty-control span{min-width:22px;text-align:center;font-weight:950}
-    .add-btn{flex:1;border:0;border-radius:999px;padding:12px;background:#111;color:white;font-weight:950}
-    .add-btn.added{background:#0ba84a}
-    .add-btn:disabled{background:#ccc}
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 18px 0 8px;
+        }
 
-    .cart-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(1120px,calc(100% - 24px));background:rgba(18,18,18,.96);color:white;border-radius:26px;padding:14px;z-index:999;box-shadow:0 18px 55px rgba(0,0,0,.3)}
-    .cart-main{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    .cart-main strong{font-size:17px}
-    .cart-main small{display:block;color:#bbb;font-weight:750}
-    .cart-total{font-size:21px;font-weight:950}
-    .cart-options{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-    .cart-options input,.cart-options select{width:100%;border:0;outline:0;border-radius:15px;padding:12px;font-weight:850;background:#2a2a2a;color:white}
-    .checkout-btn{border:0;border-radius:16px;background:linear-gradient(135deg,#ff6b00,#ff2e63);color:white;font-weight:950;padding:12px}
-    .empty{background:white;padding:24px;border-radius:24px;text-align:center;color:#777;font-weight:850;box-shadow:0 8px 25px rgba(0,0,0,.06)}
+        input, textarea, select {
+            width: 100%;
+            padding: 14px;
+            margin: 7px 0;
+            border-radius: 15px;
+            border: 1px solid #ddd;
+            font-size: 15px;
+            background: white;
+        }
 
-    @media(max-width:720px){
-      .topbar{align-items:flex-start}
-      .login-links{max-width:185px}
-      .login-links a{font-size:10px;padding:7px 8px}
-      .hero h2{font-size:27px}
-      .filters{grid-template-columns:1fr}
-      .products-grid{grid-template-columns:1fr}
-      .cart-options{grid-template-columns:1fr 1fr}
-      .checkout-btn{grid-column:1/-1}
-    }
-  </style>
+        textarea {
+            min-height: 75px;
+        }
+
+        .trust-card {
+            background: #fff8e1;
+            padding: 14px;
+            border-radius: 18px;
+            margin: 12px 0;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        .chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0;
+        }
+
+        .chip {
+            white-space: nowrap;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 20px;
+            background: #f0f0f0;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .chip.active {
+            background: #0f8a3b;
+            color: white;
+        }
+
+        .search-panel {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: white;
+            padding: 8px 0;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .shop-card {
+            min-width: 230px;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 20px;
+            padding: 12px;
+            box-shadow: 0 5px 16px rgba(0,0,0,0.08);
+        }
+
+        .shop-img {
+            height: 105px;
+            border-radius: 16px;
+            background: #eeeeee;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #777;
+            font-weight: bold;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .shop-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9px;
+            font-size: 11px;
+            color: white;
+            font-weight: bold;
+            margin: 3px 2px 0 0;
+        }
+
+        .verified {
+            background: #0f8a3b;
+        }
+
+        .premium {
+            background: #7b1fa2;
+        }
+
+        .featured {
+            background: #f57c00;
+        }
+
+        .product {
+            background: white;
+            border-radius: 22px;
+            padding: 12px;
+            margin: 14px 0;
+            border: 1px solid #eee;
+            box-shadow: 0 5px 18px rgba(0,0,0,0.09);
+        }
+
+        .product-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 18px;
+            background: #eeeeee;
+        }
+
+        .no-img {
+            height: 150px;
+            background: #eeeeee;
+            border-radius: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #777;
+            font-weight: bold;
+        }
+
+        .product-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .product-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .price {
+            color: #0f8a3b;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .meta {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #ff9800;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 9px;
+            font-size: 12px;
+            margin-top: 6px;
+            font-weight: bold;
+        }
+
+        .offer {
+            background: #d32f2f;
+        }
+
+        .out {
+            color: #d32f2f;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .cart-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .add-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+        }
+
+        .add-box input {
+            width: 22px;
+            height: 22px;
+            margin: 0;
+        }
+
+        .qty-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-box button {
+            width: 38px;
+            height: 38px;
+            border: none;
+            border-radius: 12px;
+            background: #0f8a3b;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .qty-box input {
+            width: 58px;
+            padding: 9px;
+            margin: 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .delivery-card {
+            background: #f8fff9;
+            border: 1px solid #d8f0df;
+            border-radius: 20px;
+            padding: 14px;
+            margin: 16px 0;
+        }
+
+        .bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px;
+            box-shadow: 0 -4px 18px rgba(0,0,0,0.15);
+            z-index: 20;
+        }
+
+        .bottom-inner {
+            max-width: 430px;
+            margin: auto;
+        }
+
+        .cart-info {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .checkout {
+            width: 100%;
+            background: linear-gradient(135deg, #0f8a3b, #22c064);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 18px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .empty {
+            text-align: center;
+            color: #777;
+            padding: 30px 10px;
+        }
+
+        .why {
+            background: #eef8f1;
+            border-radius: 18px;
+            padding: 14px;
+            margin: 14px 0;
+            font-size: 14px;
+        }
+    </style>
 </head>
 
 <body>
-  <div class="app">
-    <header class="topbar">
-      <a href="/" class="brand">
-        <img src="/static/logo.png" alt="HogoMart" onerror="this.style.display='none'">
-        <div>
-          <h1>HogoMart</h1>
-          <p>Local shops. Fast orders.</p>
+
+<form action="/order" method="POST" onsubmit="prepareCart()">
+
+<div class="app">
+
+    <img src="/static/logo.png" class="logo">
+
+    <div class="hero">
+        <h1>HogoMart 🚀</h1>
+        <p>Order from local shops with low platform charges</p>
+    </div>
+
+    <div class="nav">
+        <a href="/customer-login">Customer</a>
+        <a href="/shop-login">Shop</a>
+        <a href="/delivery-login">Delivery</a>
+        <a href="/login">Admin</a>
+    </div>
+
+    <div class="trust-card">
+        ✅ Low commission local platform<br>
+        ✅ Support local businesses<br>
+        ✅ Multi-shop order in one delivery
+    </div>
+
+    <div class="section-title">Your Details</div>
+    <input name="customer_name" id="name" placeholder="Your name" required>
+    <input name="phone" id="phone" placeholder="Phone number" required>
+    <textarea name="address" id="address" placeholder="Delivery address" required></textarea>
+
+    <div class="search-panel">
+        <div class="section-title">Search</div>
+        <input id="search" placeholder="Search products or shops..." onkeyup="renderProducts()">
+
+        <div class="filters">
+            <select id="categoryFilter" onchange="renderProducts()">
+                <option value="All">All Categories</option>
+            </select>
+
+            <select id="sortBy" onchange="renderProducts()">
+                <option value="az">A-Z</option>
+                <option value="low">Low Price</option>
+                <option value="high">High Price</option>
+            </select>
         </div>
-      </a>
 
-      <nav class="login-links">
-        <a href="/login?role=customer">Customer</a>
-        <a href="/login?role=shop">Shop</a>
-        <a href="/login?role=delivery">Delivery</a>
-        <a href="/login?role=admin">Admin</a>
-      </nav>
-    </header>
-
-    <section class="hero">
-      <h2>Order from local shops with low platform charges</h2>
-      <p>Groceries, gifts, food and daily needs from trusted nearby shops.</p>
-      <div class="search-wrap">
-        <span>🔍</span>
-        <input id="searchInput" type="search" placeholder="Search products or shops..." autocomplete="off">
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <h3>Categories</h3>
-        <small>Tap to filter</small>
-      </div>
-      <div class="chips" id="categoryChips">
-        <button class="chip active" type="button" data-category="">All</button>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <h3>Featured Shops</h3>
-        <small>Verified partners</small>
-      </div>
-      <div class="shop-row">
-        {% for shop in shops %}
-          {% if shop.featured or shop.verified %}
-          <div class="shop-card">
-            <div class="shop-top">
-              <div class="shop-icon">🏪</div>
-              <strong>⭐ {{ shop.rating|default(4.5) }}</strong>
-            </div>
-            <h4>{{ shop.name }}</h4>
-            <p>{{ shop.category|default("Local Shop") }} • {{ shop.delivery_time|default("30-45 min") }}</p>
-            <p>{{ shop.address|default("") }}</p>
-            <div class="badges">
-              {% if shop.verified %}<span class="badge green">Verified</span>{% endif %}
-              {% if shop.featured %}<span class="badge orange">Featured</span>{% endif %}
-              <span class="badge purple">{{ shop.plan|default("Free") }}</span>
-            </div>
-          </div>
-          {% endif %}
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <h3>Trending / Best Sellers</h3>
-        <small>Popular now</small>
-      </div>
-      <div class="products-grid" id="trendingProducts"></div>
-    </section>
-
-    <div class="filters">
-      <select id="shopFilter">
-        <option value="">All Shops</option>
-        {% for shop in shops %}
-          <option value="{{ shop.id }}">{{ shop.name }}</option>
-        {% endfor %}
-      </select>
-
-      <select id="categoryFilter">
-        <option value="">All Categories</option>
-      </select>
-
-      <select id="sortFilter">
-        <option value="az">Sort A-Z</option>
-        <option value="low">Low Price</option>
-        <option value="high">High Price</option>
-      </select>
+        <div class="chips" id="shopTabs"></div>
     </div>
 
-    <section class="section">
-      <div class="section-head">
-        <h3>All Products</h3>
-        <small id="productCount">0 products</small>
-      </div>
-      <div class="products-grid" id="allProducts"></div>
-    </section>
-  </div>
+    <div class="section-title">Featured Shops</div>
+    <div class="chips" id="featuredShops"></div>
 
-  <form id="orderForm" action="/order" method="POST" class="cart-bar">
-    <input type="hidden" name="cart_data" id="cartDataInput">
-    <input type="hidden" name="total_amount" id="totalAmountInput">
+    <div class="section-title">Trending Products</div>
+    <div id="trendingProducts"></div>
 
-    <div class="cart-main">
-      <div>
-        <strong><span id="cartCount">0</span> items selected</strong>
-        <small>Multi-shop cart supported</small>
-      </div>
-      <div class="cart-total">₹<span id="cartTotal">0</span></div>
+    <div class="section-title">All Products</div>
+    <div id="productList"></div>
+
+    <div class="delivery-card">
+        <div class="section-title">Delivery & Payment</div>
+
+        <select name="distance" id="distance" onchange="calculateTotal()">
+            <option value="within_2km">Within 2 km - ₹20</option>
+            <option value="2_5km">2 to 5 km - ₹40</option>
+        </select>
+
+        <label>
+            <input type="checkbox" name="emergency" value="yes" onchange="calculateTotal()">
+            Emergency delivery + ₹20
+        </label>
+
+        <textarea name="special_request" placeholder="Special request / delivery note"></textarea>
+
+        <select name="payment_method">
+            <option value="COD">Cash on Delivery</option>
+            <option value="UPI">UPI / QR Payment</option>
+        </select>
     </div>
 
-    <div class="cart-options">
-      <input type="text" name="name" id="customerName" placeholder="Name" required>
-      <input type="tel" name="phone" id="customerPhone" placeholder="Phone" required>
-      <input type="text" name="address" id="customerAddress" placeholder="Address" required>
-
-      <select name="delivery_type" id="deliveryType">
-        <option value="normal" data-extra="0">Normal Delivery</option>
-        <option value="emergency" data-extra="20">Emergency +₹20</option>
-      </select>
-
-      <select name="payment_method" id="paymentMethod">
-        <option value="COD">COD</option>
-        <option value="UPI">UPI</option>
-      </select>
-
-      <button type="submit" class="checkout-btn">Place Order</button>
+    <div class="why">
+        <b>Why choose HogoMart?</b><br>
+        Local shops pay lower commission than big delivery apps, so your money supports nearby businesses directly.
     </div>
-  </form>
 
-  <script>
-    const shops = {{ shops|tojson|safe }};
-    const products = {{ products|tojson|safe }};
-    const cart = {};
+    <input type="hidden" name="cart_data" id="cartData">
 
-    const safeNum = (v, f = 0) => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : f;
-    };
+</div>
 
-    const shopMap = {};
-    shops.forEach(s => shopMap[s.id] = s);
-
-    const settings = {{ settings|tojson|safe }};
-    const baseDeliveryFee = safeNum(settings.default_delivery_fee, 30);
-    const platformFee = safeNum(settings.platform_fee, 5);
-
-    const searchInput = document.getElementById("searchInput");
-    const categoryChips = document.getElementById("categoryChips");
-    const shopFilter = document.getElementById("shopFilter");
-    const categoryFilter = document.getElementById("categoryFilter");
-    const sortFilter = document.getElementById("sortFilter");
-    const allProducts = document.getElementById("allProducts");
-    const trendingProducts = document.getElementById("trendingProducts");
-    const productCount = document.getElementById("productCount");
-    const cartCount = document.getElementById("cartCount");
-    const cartTotal = document.getElementById("cartTotal");
-    const deliveryType = document.getElementById("deliveryType");
-    const paymentMethod = document.getElementById("paymentMethod");
-    const orderForm = document.getElementById("orderForm");
-    const cartDataInput = document.getElementById("cartDataInput");
-    const totalAmountInput = document.getElementById("totalAmountInput");
-    const customerName = document.getElementById("customerName");
-    const customerPhone = document.getElementById("customerPhone");
-    const customerAddress = document.getElementById("customerAddress");
-
-    function getTags(p){
-      if(Array.isArray(p.tags)) return p.tags;
-      if(typeof p.tags === "string") return p.tags.split(",").map(x=>x.trim()).filter(Boolean);
-      return [];
-    }
-
-    function getShopName(shopId){
-      return shopMap[shopId]?.name || "Local Shop";
-    }
-
-    function getImage(p){
-      return p.image || p.image_url || p.photo || "";
-    }
-
-    function loadCustomer(){
-      customerName.value = localStorage.getItem("hm_name") || "";
-      customerPhone.value = localStorage.getItem("hm_phone") || "";
-      customerAddress.value = localStorage.getItem("hm_address") || "";
-    }
-
-    function saveCustomer(){
-      localStorage.setItem("hm_name", customerName.value.trim());
-      localStorage.setItem("hm_phone", customerPhone.value.trim());
-      localStorage.setItem("hm_address", customerAddress.value.trim());
-    }
-
-    [customerName, customerPhone, customerAddress].forEach(i => i.addEventListener("input", saveCustomer));
-
-    function buildCategories(){
-      const cats = [...new Set(products.map(p => p.category || "General"))].sort();
-
-      cats.forEach(cat => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "chip";
-        chip.dataset.category = cat;
-        chip.textContent = cat;
-        categoryChips.appendChild(chip);
-
-        const opt = document.createElement("option");
-        opt.value = cat;
-        opt.textContent = cat;
-        categoryFilter.appendChild(opt);
-      });
-
-      categoryChips.addEventListener("click", e => {
-        if(!e.target.classList.contains("chip")) return;
-        document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
-        e.target.classList.add("active");
-        categoryFilter.value = e.target.dataset.category || "";
-        renderProducts();
-      });
-    }
-
-    function productCard(p){
-      const id = p.id;
-      const price = safeNum(p.price);
-      const stock = safeNum(p.stock);
-      const image = getImage(p);
-      const tags = getTags(p);
-      const out = stock <= 0;
-      const qty = cart[id]?.qty || 1;
-      const added = !!cart[id];
-
-      const card = document.createElement("div");
-      card.className = "product-card";
-      card.innerHTML = `
-        <div class="product-img">
-          ${image ? `<img src="${image}" onerror="this.remove();this.parentElement.innerHTML='No Image';">` : "No Image"}
+<div class="bottom">
+    <div class="bottom-inner">
+        <div class="cart-info">
+            <span><span id="itemCount">0</span> item(s)</span>
+            <span>Total ₹<span id="total">0</span></span>
         </div>
-        <div class="product-body">
-          <div>
-            <div class="product-title">${p.name || "Unnamed Product"}</div>
-            <div class="shop-name">${getShopName(p.shop_id)}</div>
-          </div>
+        <button class="checkout" type="submit">Checkout</button>
+    </div>
+</div>
 
-          <div class="badges">
-            ${tags.map(t => `<span class="badge orange">${t}</span>`).join("")}
-            ${p.offer ? `<span class="badge green">${p.offer}</span>` : ""}
-            ${out ? `<span class="badge red">Out of Stock</span>` : ""}
-          </div>
+</form>
 
-          <div class="price-line">
-            <div class="price">₹${price.toFixed(0)}</div>
-            <div class="stock ${out ? "out" : ""}">${out ? "Out" : stock + " left"}</div>
-          </div>
+<script>
+const shops = {{ shops | tojson }};
+const products = {{ products | tojson }};
+const plans = {{ plans | tojson }};
 
-          <div class="product-actions">
-            <div class="qty-control">
-              <button type="button" onclick="changeQty('${id}',-1)">−</button>
-              <span id="qty-${id}">${qty}</span>
-              <button type="button" onclick="changeQty('${id}',1)">+</button>
-            </div>
-            <button type="button" class="add-btn ${added ? "added" : ""}" ${out ? "disabled" : ""} onclick="toggleCart('${id}')">
-              ${added ? "Added" : "Add"}
+let selectedShop = "All";
+let cart = [];
+
+function safeNum(value, fallback = 0) {
+    let n = Number(value);
+    return isNaN(n) ? fallback : n;
+}
+
+function shopImage(img) {
+    if (img && img.trim() !== "") {
+        return `<img src="/static/product_images/${img}">`;
+    }
+    return `No Image`;
+}
+
+function productImage(img) {
+    if (img && img.trim() !== "") {
+        return `<img src="/static/product_images/${img}" class="product-img">`;
+    }
+    return `<div class="no-img">No Image</div>`;
+}
+
+function getCategories() {
+    let categories = ["All"];
+
+    Object.keys(products).forEach(shop => {
+        products[shop].forEach(p => {
+            let c = p.category || "General";
+            if (!categories.includes(c)) {
+                categories.push(c);
+            }
+        });
+    });
+
+    let select = document.getElementById("categoryFilter");
+    select.innerHTML = "";
+
+    categories.forEach(c => {
+        select.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+}
+
+function renderShopTabs() {
+    let tabs = document.getElementById("shopTabs");
+    tabs.innerHTML = "";
+
+    let allShops = ["All", ...Object.keys(shops)];
+
+    allShops.forEach(shop => {
+        tabs.innerHTML += `
+            <button type="button"
+                class="chip ${selectedShop === shop ? 'active' : ''}"
+                onclick="selectShop('${shop.replace(/'/g, "\\'")}')">
+                ${shop}
             </button>
-          </div>
-        </div>
-      `;
-      return card;
-    }
-
-    function getFiltered(){
-      const q = searchInput.value.trim().toLowerCase();
-      const shopId = shopFilter.value;
-      const cat = categoryFilter.value;
-      const sort = sortFilter.value;
-
-      let list = products.filter(p => {
-        const shop = shopMap[p.shop_id] || {};
-        const text = [
-          p.name || "",
-          p.category || "",
-          p.offer || "",
-          p.description || "",
-          getTags(p).join(" "),
-          shop.name || "",
-          shop.category || ""
-        ].join(" ").toLowerCase();
-
-        return (!q || text.includes(q)) &&
-               (!shopId || p.shop_id === shopId) &&
-               (!cat || p.category === cat);
-      });
-
-      if(sort === "az") list.sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
-      if(sort === "low") list.sort((a,b)=>safeNum(a.price)-safeNum(b.price));
-      if(sort === "high") list.sort((a,b)=>safeNum(b.price)-safeNum(a.price));
-
-      return list;
-    }
-
-    function renderTrending(){
-      const trending = products.filter(p => {
-        const t = getTags(p).join(" ").toLowerCase();
-        return t.includes("best") || t.includes("trending") || p.offer;
-      }).slice(0,8);
-
-      trendingProducts.innerHTML = "";
-      if(!trending.length){
-        trendingProducts.innerHTML = `<div class="empty">Trending products will appear here.</div>`;
-        return;
-      }
-      trending.forEach(p => trendingProducts.appendChild(productCard(p)));
-    }
-
-    function renderProducts(){
-      const list = getFiltered();
-      allProducts.innerHTML = "";
-
-      if(!list.length){
-        allProducts.innerHTML = `<div class="empty">No products found.</div>`;
-      }else{
-        list.forEach(p => allProducts.appendChild(productCard(p)));
-      }
-
-      productCount.textContent = `${list.length} products`;
-      renderTrending();
-      updateCart();
-    }
-
-    function changeQty(id, delta){
-      const p = products.find(x => x.id === id);
-      if(!p) return;
-
-      const stock = safeNum(p.stock);
-      const el = document.getElementById(`qty-${id}`);
-      let qty = cart[id]?.qty || safeNum(el?.textContent,1);
-      qty = Math.max(1, qty + delta);
-      qty = Math.min(qty, stock || qty);
-
-      if(cart[id]) cart[id].qty = qty;
-      document.querySelectorAll(`[id="qty-${id}"]`).forEach(x => x.textContent = qty);
-      updateCart();
-    }
-
-    function toggleCart(id){
-      const p = products.find(x => x.id === id);
-      if(!p) return;
-
-      const stock = safeNum(p.stock);
-      if(stock <= 0) return;
-
-      const qty = safeNum(document.getElementById(`qty-${id}`)?.textContent,1);
-
-      if(cart[id]){
-        delete cart[id];
-      }else{
-        cart[id] = {
-          product_id:id,
-          shop_id:p.shop_id,
-          shop_name:getShopName(p.shop_id),
-          name:p.name,
-          price:safeNum(p.price),
-          qty:Math.min(qty,stock),
-          stock:stock
-        };
-      }
-
-      renderProducts();
-      updateCart();
-    }
-
-    function updateCart(){
-      let count = 0;
-      let subtotal = 0;
-
-      Object.values(cart).forEach(item => {
-        count += safeNum(item.qty);
-        subtotal += safeNum(item.price) * safeNum(item.qty);
-      });
-
-      const emergencyExtra = safeNum(deliveryType.options[deliveryType.selectedIndex]?.dataset?.extra,0);
-      const deliveryFee = count > 0 ? baseDeliveryFee + emergencyExtra : 0;
-      const total = count > 0 ? subtotal + deliveryFee + platformFee : 0;
-
-      cartCount.textContent = count;
-      cartTotal.textContent = total.toFixed(0);
-      totalAmountInput.value = total.toFixed(2);
-
-      cartDataInput.value = JSON.stringify({
-        items:Object.values(cart),
-        item_count:count,
-        subtotal:subtotal,
-        delivery_fee:deliveryFee,
-        platform_fee:count > 0 ? platformFee : 0,
-        emergency_delivery:deliveryType.value === "emergency",
-        payment_method:paymentMethod.value,
-        total:total
-      });
-    }
-
-    orderForm.addEventListener("submit", e => {
-      saveCustomer();
-      updateCart();
-
-      if(!Object.keys(cart).length){
-        e.preventDefault();
-        alert("Please add at least one product to cart.");
-      }
+        `;
     });
+}
 
-    searchInput.addEventListener("input", renderProducts);
-    shopFilter.addEventListener("change", renderProducts);
-    sortFilter.addEventListener("change", renderProducts);
-    deliveryType.addEventListener("change", updateCart);
-    paymentMethod.addEventListener("change", updateCart);
-
-    categoryFilter.addEventListener("change", () => {
-      document.querySelectorAll(".chip").forEach(chip => {
-        chip.classList.toggle("active", chip.dataset.category === categoryFilter.value);
-      });
-      if(!categoryFilter.value){
-        const all = document.querySelector('.chip[data-category=""]');
-        if(all) all.classList.add("active");
-      }
-      renderProducts();
-    });
-
-    loadCustomer();
-    buildCategories();
+function selectShop(shop) {
+    selectedShop = shop;
+    renderShopTabs();
     renderProducts();
-    updateCart();
-  </script>
+}
+
+function renderFeaturedShops() {
+    let box = document.getElementById("featuredShops");
+    box.innerHTML = "";
+
+    Object.keys(shops).forEach(shopName => {
+        let s = shops[shopName];
+
+        if (!s.featured && s.plan !== "Pro" && s.plan !== "Elite") return;
+
+        box.innerHTML += `
+            <div class="shop-card" onclick="selectShop('${shopName.replace(/'/g, "\\'")}')">
+                <div class="shop-img">${shopImage(s.image || "")}</div>
+                <b>${shopName}</b><br>
+                <span class="meta">${s.category || "General"} • ⭐ ${s.rating || "4.5"}</span><br>
+                <span class="meta">${s.delivery_time || "30-60 mins"}</span><br>
+                ${s.verified ? `<span class="badge verified">Verified</span>` : ""}
+                ${s.featured ? `<span class="badge featured">Featured</span>` : ""}
+                ${s.plan !== "Free" ? `<span class="badge premium">${s.plan}</span>` : ""}
+            </div>
+        `;
+    });
+
+    if (box.innerHTML.trim() === "") {
+        box.innerHTML = `<div class="empty">No featured shops yet</div>`;
+    }
+}
+
+function getAllProducts() {
+    let arr = [];
+
+    Object.keys(products).forEach(shop => {
+        products[shop].forEach(p => {
+            arr.push({...p, shop: shop});
+        });
+    });
+
+    return arr;
+}
+
+function renderTrending() {
+    let box = document.getElementById("trendingProducts");
+    box.innerHTML = "";
+
+    let trending = getAllProducts().filter(p => {
+        return p.bestseller || (p.tag || "").toLowerCase().includes("best") || (p.tag || "").toLowerCase().includes("trend");
+    }).slice(0, 4);
+
+    if (trending.length === 0) {
+        box.innerHTML = `<div class="empty">No trending products yet</div>`;
+        return;
+    }
+
+    trending.forEach((p, index) => {
+        box.innerHTML += productCard(p, index, true);
+    });
+}
+
+function productCard(p, index, compact = false) {
+    let out = safeNum(p.stock) <= 0;
+    let plan = shops[p.shop]?.plan || "Free";
+    let verified = shops[p.shop]?.verified || false;
+
+    return `
+        <div class="product">
+            ${productImage(p.image || "")}
+
+            <div class="product-head">
+                <div>
+                    <div class="product-name">${p.name}</div>
+                    <div class="meta">${p.shop}</div>
+                </div>
+                <div class="price">₹${safeNum(p.price)}</div>
+            </div>
+
+            <div class="meta">${p.category || "General"} • Stock: ${safeNum(p.stock)}</div>
+            <div class="meta">${shops[p.shop]?.delivery_time || "30-60 mins"}</div>
+
+            ${verified ? `<span class="badge verified">Verified</span>` : ""}
+            ${plan !== "Free" ? `<span class="badge premium">${plan}</span>` : ""}
+            ${p.tag ? `<span class="tag">${p.tag}</span>` : ""}
+            ${p.offer ? `<span class="tag offer">${p.offer}</span>` : ""}
+            ${out ? `<div class="out">Out of Stock</div>` : ""}
+
+            <div class="cart-row">
+                <label class="add-box">
+                    <input type="checkbox" class="check"
+                        data-shop="${p.shop}"
+                        data-name="${p.name}"
+                        data-price="${safeNum(p.price)}"
+                        data-barcode="${p.barcode || p.name}"
+                        data-stock="${safeNum(p.stock)}"
+                        onchange="calculateTotal()" ${out ? "disabled" : ""}>
+                    Add
+                </label>
+
+                <div class="qty-box">
+                    <button type="button" onclick="changeQty(this, -1)" ${out ? "disabled" : ""}>-</button>
+                    <input type="number" class="qty" value="1" min="1" max="${safeNum(p.stock)}" onchange="calculateTotal()" ${out ? "disabled" : ""}>
+                    <button type="button" onclick="changeQty(this, 1)" ${out ? "disabled" : ""}>+</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderProducts() {
+    const search = document.getElementById("search").value.toLowerCase();
+    const category = document.getElementById("categoryFilter").value;
+    const sortBy = document.getElementById("sortBy").value;
+    const list = document.getElementById("productList");
+
+    let all = [];
+
+    Object.keys(products).forEach(shop => {
+        if (selectedShop !== "All" && selectedShop !== shop) return;
+
+        products[shop].forEach(p => {
+            let nameMatch = (p.name || "").toLowerCase().includes(search);
+            let shopMatch = shop.toLowerCase().includes(search);
+            let categoryMatch = category === "All" || (p.category || "General") === category;
+
+            if ((nameMatch || shopMatch) && categoryMatch) {
+                all.push({...p, shop: shop});
+            }
+        });
+    });
+
+    if (sortBy === "az") {
+        all.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    } else if (sortBy === "low") {
+        all.sort((a, b) => safeNum(a.price) - safeNum(b.price));
+    } else if (sortBy === "high") {
+        all.sort((a, b) => safeNum(b.price) - safeNum(a.price));
+    }
+
+    list.innerHTML = "";
+
+    if (all.length === 0) {
+        list.innerHTML = `<div class="empty">No products found</div>`;
+        calculateTotal();
+        return;
+    }
+
+    all.forEach((p, index) => {
+        list.innerHTML += productCard(p, index);
+    });
+
+    calculateTotal();
+}
+
+function changeQty(button, change) {
+    const productBox = button.closest(".product");
+    const qtyInput = productBox.querySelector("input[type='number']");
+    const check = productBox.querySelector(".check");
+
+    let qty = safeNum(qtyInput.value, 1) + change;
+    let stock = safeNum(check.dataset.stock, 1);
+
+    if (qty < 1) qty = 1;
+    if (qty > stock) qty = stock;
+
+    qtyInput.value = qty;
+    check.checked = true;
+
+    calculateTotal();
+}
+
+function calculateTotal() {
+    cart = [];
+    let subtotal = 0;
+    let itemCount = 0;
+
+    document.querySelectorAll(".product").forEach(productBox => {
+        const check = productBox.querySelector(".check");
+        const qtyInput = productBox.querySelector("input[type='number']");
+
+        if (check && check.checked) {
+            let qty = safeNum(qtyInput.value, 1);
+            let price = safeNum(check.dataset.price, 0);
+
+            subtotal += price * qty;
+            itemCount += qty;
+
+            cart.push({
+                shop: check.dataset.shop,
+                name: check.dataset.name,
+                price: price,
+                qty: qty,
+                barcode: check.dataset.barcode
+            });
+        }
+    });
+
+    let distance = document.getElementById("distance").value;
+    let delivery = distance === "within_2km" ? 20 : 40;
+    let emergency = document.querySelector("input[name='emergency']").checked ? 20 : 0;
+    let platformFee = 0;
+
+    let total = subtotal + delivery + emergency + platformFee;
+
+    document.getElementById("total").innerText = total;
+    document.getElementById("itemCount").innerText = itemCount;
+}
+
+function prepareCart() {
+    if (cart.length === 0) {
+        alert("Please add at least one product to cart.");
+        return false;
+    }
+
+    document.getElementById("cartData").value = JSON.stringify(cart);
+
+    localStorage.setItem("hm_name", document.getElementById("name").value);
+    localStorage.setItem("hm_phone", document.getElementById("phone").value);
+    localStorage.setItem("hm_address", document.getElementById("address").value);
+
+    return true;
+}
+
+window.onload = function () {
+    document.getElementById("name").value = localStorage.getItem("hm_name") || "";
+    document.getElementById("phone").value = localStorage.getItem("hm_phone") || "";
+    document.getElementById("address").value = localStorage.getItem("hm_address") || "";
+
+    getCategories();
+    renderShopTabs();
+    renderFeaturedShops();
+    renderTrending();
+    renderProducts();
+};
+</script>
+
 </body>
 </html>
